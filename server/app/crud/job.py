@@ -10,3 +10,10 @@ def get_active_jobs(db: Session):
         .order_by(Job.created_at.desc())
         .all()
     )
+
+def get_job_by_id(db: Session, job_id: int):
+    return (
+        db.query(Job)
+        .filter(Job.id == job_id, Job.status == "active")
+        .first()
+    )
