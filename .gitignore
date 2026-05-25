@@ -1,0 +1,23 @@
+# Next.js
+client/node_modules/
+client/.next/
+client/out/
+client/.env.local
+
+# Python / FastAPI
+server/.venv/
+server/venv/
+server/__pycache__/
+server/app/__pycache__/
+server/app/db/__pycache__/
+server/app/models/__pycache__/
+server/app/schemas/__pycache__/
+server/app/crud/__pycache__/
+server/app/api/__pycache__/
+server/app/api/v1/__pycache__/
+server/app/api/v1/endpoints/__pycache__/
+server/.env
+
+# System
+.DS_Store
+Thumbs.db
