@@ -5,6 +5,7 @@ import {
   FiDollarSign,
   FiClock,
   FiArrowRight,
+  FiLock,
 } from "react-icons/fi";
 import { MdVerified } from "react-icons/md";
 import { LuSparkles } from "react-icons/lu";
@@ -18,7 +19,7 @@ function JobMetaItem({ icon, children }) {
   );
 }
 
-export default function JobCard({ job }) {
+export default function JobCard({ job, isLoggedIn = false }) {
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-100 hover:shadow-lg hover:shadow-blue-950/5 md:p-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -33,7 +34,7 @@ export default function JobCard({ job }) {
                 {job.title}
               </h3>
 
-              {job.aiRecommended ? (
+              {isLoggedIn && job.aiRecommended ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-extrabold text-blue-700">
                   <LuSparkles size={12} />
                   AI Pick
@@ -101,27 +102,40 @@ export default function JobCard({ job }) {
             </button>
           </div>
 
-          <div className="w-full rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 lg:w-52">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-extrabold uppercase tracking-wide text-blue-500">
-                AI Match
-              </span>
-              <span className="text-lg font-black text-blue-700">
-                {job.match}
-              </span>
-            </div>
+          {isLoggedIn ? (
+            <div className="w-full rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 lg:w-52">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-extrabold uppercase tracking-wide text-blue-500">
+                  AI Match
+                </span>
+                <span className="text-lg font-black text-blue-700">
+                  {job.match}
+                </span>
+              </div>
 
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
-              <div
-                className="h-full rounded-full bg-blue-700"
-                style={{ width: job.match }}
-              />
-            </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
+                <div
+                  className="h-full rounded-full bg-blue-700"
+                  style={{ width: job.match }}
+                />
+              </div>
 
-            <p className="mt-2 text-xs font-bold text-slate-600">
-              {job.status}
-            </p>
-          </div>
+              <p className="mt-2 text-xs font-bold text-slate-600">
+                {job.status}
+              </p>
+            </div>
+          ) : (
+            <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 lg:w-52">
+              <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-slate-500">
+                <FiLock size={13} />
+                AI Match Locked
+              </div>
+
+              <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
+                Login and upload your CV to unlock personalized match scores.
+              </p>
+            </div>
+          )}
 
           <p className="text-sm font-semibold text-slate-400">
             Posted on {job.postedDate}
