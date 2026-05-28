@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { registerCandidate } from "@/lib/api/authApi";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
+import { loginWithGoogle, registerCandidate } from "@/lib/api/authApi";
 
 function BriefcaseIcon() {
   return (
@@ -89,29 +90,6 @@ function MailIcon() {
   );
 }
 
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4">
-      <path
-        fill="#4285F4"
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.84z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06L5.84 9.9C6.71 7.3 9.14 5.38 12 5.38z"
-      />
-    </svg>
-  );
-}
-
 function LinkedInIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="#0A66C2">
@@ -135,6 +113,9 @@ export default function AuthCard() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const isCandidateSelected = selectedRole === "candidate";
+  const isRecruiterSelected = selectedRole === "recruiter";
+
   function handleChange(event) {
     const { name, value } = event.target;
 
@@ -145,7 +126,7 @@ export default function AuthCard() {
   }
 
   function validateForm() {
-    if (selectedRole !== "candidate") {
+    if (!isCandidateSelected) {
       return "Recruiter registration is planned for the next sprint. Please continue as a Job Seeker for now.";
     }
 
@@ -191,14 +172,40 @@ export default function AuthCard() {
     }
   }
 
-  function handleSocialSignup(providerName) {
-    setErrorMessage(
-      `${providerName} signup is prepared in the UI, but backend connection will be added in the next sprint.`
-    );
+  async function handleGoogleSignup(idToken) {
+    setErrorMessage("");
+    setStatusMessage("");
+
+    if (!isCandidateSelected) {
+      setErrorMessage(
+        "Google recruiter signup is planned for the next sprint. Please continue as a Job Seeker for now."
+      );
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      await loginWithGoogle(idToken);
+
+      setStatusMessage("Google signup successful. Redirecting...");
+      router.push("/candidate/upload-cv");
+    } catch (error) {
+      setErrorMessage(error.message || "Google signup failed. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  const isCandidateSelected = selectedRole === "candidate";
-  const isRecruiterSelected = selectedRole === "recruiter";
+  function handleGoogleError(message) {
+    setErrorMessage(message || "Google signup failed. Please try again.");
+  }
+
+  function handleLinkedInSignup() {
+    setErrorMessage(
+      "LinkedIn signup needs a backend LinkedIn OAuth endpoint. It will be connected after the LinkedIn app credentials are ready."
+    );
+  }
 
   return (
     <section className="flex min-h-screen items-center justify-center overflow-hidden bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 px-5 pt-20 pb-8">
@@ -267,59 +274,45 @@ export default function AuthCard() {
           </div>
 
           <form onSubmit={handleSubmit} className="mt-4 space-y-3 text-left">
-            <div>
-              <label htmlFor="name" className="sr-only">
-                Full name
-              </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Full name"
-                autoComplete="name"
-                disabled={!isCandidateSelected || isSubmitting}
-                className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-600 disabled:cursor-not-allowed disabled:bg-slate-100"
-              />
-            </div>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Full name"
+              autoComplete="name"
+              disabled={!isCandidateSelected || isSubmitting}
+              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-600 disabled:cursor-not-allowed disabled:bg-slate-100"
+            />
 
-            <div>
-              <label htmlFor="register-email" className="sr-only">
-                Email address
-              </label>
-              <input
-                id="register-email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="Email address"
-                autoComplete="email"
-                disabled={!isCandidateSelected || isSubmitting}
-                className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-600 disabled:cursor-not-allowed disabled:bg-slate-100"
-              />
-            </div>
+            <input
+              id="register-email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="Email address"
+              autoComplete="email"
+              disabled={!isCandidateSelected || isSubmitting}
+              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-600 disabled:cursor-not-allowed disabled:bg-slate-100"
+            />
 
-            <div>
-              <label htmlFor="register-password" className="sr-only">
-                Password
-              </label>
-              <input
-                id="register-password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Password e.g. Password@123"
-                autoComplete="new-password"
-                disabled={!isCandidateSelected || isSubmitting}
-                className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-600 disabled:cursor-not-allowed disabled:bg-slate-100"
-              />
-              <p className="mt-1 text-[10px] font-medium text-slate-400">
-                Use 8+ characters with uppercase, lowercase, number, and symbol.
-              </p>
-            </div>
+            <input
+              id="register-password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Password e.g. Password@123"
+              autoComplete="new-password"
+              disabled={!isCandidateSelected || isSubmitting}
+              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-600 disabled:cursor-not-allowed disabled:bg-slate-100"
+            />
+
+            <p className="mt-1 text-[10px] font-medium text-slate-400">
+              Use 8+ characters with uppercase, lowercase, number, and symbol.
+            </p>
 
             {errorMessage ? (
               <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-center text-[12px] font-semibold text-red-600">
@@ -352,18 +345,18 @@ export default function AuthCard() {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => handleSocialSignup("Google")}
-              className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
-            >
-              <GoogleIcon /> Google
-            </button>
+            <GoogleAuthButton
+              buttonText="signup_with"
+              disabled={isSubmitting || !isCandidateSelected}
+              onGoogleSuccess={handleGoogleSignup}
+              onGoogleError={handleGoogleError}
+            />
 
             <button
               type="button"
-              onClick={() => handleSocialSignup("LinkedIn")}
-              className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
+              onClick={handleLinkedInSignup}
+              disabled={isSubmitting || !isCandidateSelected}
+              className="flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <LinkedInIcon /> LinkedIn
             </button>

@@ -17,8 +17,22 @@ async function parseApiResponse(response) {
       data?.message ||
       "Something went wrong. Please try again.";
 
-    throw new Error(Array.isArray(message) ? message[0]?.msg : message);
+    if (Array.isArray(message)) {
+      throw new Error(message[0]?.msg || "Validation failed.");
+    }
+
+    throw new Error(message);
   }
+
+  return data;
+}
+
+function saveLoginResponse(data) {
+  saveAuthData({
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    user: data.user,
+  });
 
   return data;
 }
@@ -52,14 +66,22 @@ export async function loginCandidate({ email, password }) {
   });
 
   const data = await parseApiResponse(response);
+  return saveLoginResponse(data);
+}
 
-  saveAuthData({
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token,
-    user: data.user,
+export async function loginWithGoogle(idToken) {
+  const response = await fetch(`${API_BASE_URL}/auth/google`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      id_token: idToken,
+    }),
   });
 
-  return data;
+  const data = await parseApiResponse(response);
+  return saveLoginResponse(data);
 }
 
 export async function getCurrentUser() {
