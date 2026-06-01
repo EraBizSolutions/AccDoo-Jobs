@@ -39,8 +39,8 @@ function loadGoogleIdentityScript() {
     const existingScript = document.getElementById(GOOGLE_SCRIPT_ID);
 
     if (existingScript) {
-      existingScript.addEventListener("load", resolve);
-      existingScript.addEventListener("error", reject);
+      existingScript.addEventListener("load", resolve, { once: true });
+      existingScript.addEventListener("error", reject, { once: true });
       return;
     }
 
@@ -64,13 +64,23 @@ export default function GoogleAuthButton({
   disabled = false,
 }) {
   const hiddenGoogleButtonRef = useRef(null);
+  const successCallbackRef = useRef(onGoogleSuccess);
+  const errorCallbackRef = useRef(onGoogleError);
+
   const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    successCallbackRef.current = onGoogleSuccess;
+    errorCallbackRef.current = onGoogleError;
+  }, [onGoogleSuccess, onGoogleError]);
 
   useEffect(() => {
     const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
     if (!googleClientId) {
-      onGoogleError?.("Google Client ID is missing in frontend .env.local.");
+      errorCallbackRef.current?.(
+        "Google Client ID is missing in frontend .env.local."
+      );
       return;
     }
 
@@ -88,11 +98,13 @@ export default function GoogleAuthButton({
           client_id: googleClientId,
           callback: async (response) => {
             if (!response?.credential) {
-              onGoogleError?.("Google did not return a valid credential.");
+              errorCallbackRef.current?.(
+                "Google did not return a valid credential."
+              );
               return;
             }
 
-            await onGoogleSuccess(response.credential);
+            await successCallbackRef.current?.(response.credential);
           },
         });
 
@@ -108,7 +120,9 @@ export default function GoogleAuthButton({
 
         setIsReady(true);
       } catch {
-        onGoogleError?.("Google login failed to load. Please try again.");
+        errorCallbackRef.current?.(
+          "Google login failed to load. Please try again."
+        );
       }
     }
 
@@ -117,7 +131,7 @@ export default function GoogleAuthButton({
     return () => {
       isMounted = false;
     };
-  }, [buttonText, onGoogleError, onGoogleSuccess]);
+  }, [buttonText]);
 
   return (
     <div

@@ -7,7 +7,13 @@ import { BsBriefcaseFill } from "react-icons/bs";
 import { IoNotificationsOutline, IoClose } from "react-icons/io5";
 import { HiOutlineMenuAlt3 } from "react-icons/hi";
 
-import { clearAuthData, getStoredUser } from "@/lib/utils/tokenStorage";
+import { getCurrentUser } from "@/lib/api/authApi";
+import {
+  clearAuthData,
+  getStoredUser,
+  saveAuthData,
+  setSelectedLoginMode,
+} from "@/lib/utils/tokenStorage";
 
 export default function Navbar() {
   const router = useRouter();
@@ -16,8 +22,37 @@ export default function Navbar() {
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    const storedUser = getStoredUser();
-    setCurrentUser(storedUser);
+    let isMounted = true;
+
+    async function syncCurrentUser() {
+      const storedUser = getStoredUser();
+
+      if (storedUser && isMounted) {
+        setCurrentUser(storedUser);
+      }
+
+      try {
+        const freshUser = await getCurrentUser();
+
+        saveAuthData({
+          user: freshUser,
+        });
+
+        if (isMounted) {
+          setCurrentUser(freshUser);
+        }
+      } catch {
+        if (!storedUser && isMounted) {
+          setCurrentUser(null);
+        }
+      }
+    }
+
+    syncCurrentUser();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   function handleLogout() {
@@ -27,7 +62,29 @@ export default function Navbar() {
     router.push("/login");
   }
 
+  function handlePostJobClick() {
+    setOpen(false);
+
+    if (!currentUser) {
+      setSelectedLoginMode("recruiter");
+      router.push("/login");
+      return;
+    }
+
+    const canRecruit =
+      currentUser.role === "recruiter" || currentUser.role === "both";
+
+    if (canRecruit) {
+      router.push("/recruiter/jobs/create");
+      return;
+    }
+
+    router.push("/recruiter/profile");
+  }
+
   const firstName = currentUser?.name?.split(" ")[0];
+  const canRecruit =
+    currentUser?.role === "recruiter" || currentUser?.role === "both";
 
   return (
     <header className="fixed left-0 top-0 z-50 w-full border-b border-slate-100 bg-white/95 backdrop-blur-xl">
@@ -43,17 +100,22 @@ export default function Navbar() {
         </Link>
 
         <div className="hidden items-center gap-4 md:flex">
-          <button className="text-sm font-semibold text-slate-700 hover:text-blue-700">
-            + Post a job
+          <button
+            type="button"
+            onClick={handlePostJobClick}
+            className="text-sm font-semibold text-slate-700 hover:text-blue-700"
+          >
+            {currentUser && !canRecruit ? "Become a recruiter" : "+ Post a job"}
           </button>
 
           {currentUser ? (
             <>
               <div className="rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700">
-                Hi, {firstName || "Candidate"}
+                Hi, {firstName || "User"}
               </div>
 
               <button
+                type="button"
                 onClick={handleLogout}
                 className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800"
               >
@@ -87,6 +149,7 @@ export default function Navbar() {
         </div>
 
         <button
+          type="button"
           onClick={() => setOpen(true)}
           className="grid h-10 w-10 place-items-center rounded-full text-slate-800 hover:bg-slate-100 md:hidden"
           aria-label="Open menu"
@@ -95,7 +158,7 @@ export default function Navbar() {
         </button>
       </nav>
 
-      {open && (
+      {open ? (
         <div className="fixed inset-0 z-50 bg-slate-950/40 md:hidden">
           <div className="ml-auto h-screen w-[82%] bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between">
@@ -110,14 +173,22 @@ export default function Navbar() {
                 JobsEra
               </Link>
 
-              <button onClick={() => setOpen(false)} aria-label="Close menu">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Close menu"
+              >
                 <IoClose size={28} />
               </button>
             </div>
 
             <div className="mt-10 space-y-6">
-              <button className="block text-lg font-semibold text-slate-800">
-                + Post a job
+              <button
+                type="button"
+                onClick={handlePostJobClick}
+                className="block text-lg font-semibold text-slate-800"
+              >
+                {currentUser && !canRecruit ? "Become a recruiter" : "+ Post a job"}
               </button>
 
               {currentUser ? (
@@ -127,11 +198,12 @@ export default function Navbar() {
                       Signed in as
                     </p>
                     <p className="text-base font-extrabold text-blue-700">
-                      {currentUser.name || "Candidate"}
+                      {currentUser.name || "User"}
                     </p>
                   </div>
 
                   <button
+                    type="button"
                     onClick={handleLogout}
                     className="inline-flex rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white"
                   >
@@ -160,7 +232,7 @@ export default function Navbar() {
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </header>
   );
 }

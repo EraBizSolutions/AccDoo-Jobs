@@ -5,10 +5,10 @@ import {
   saveAuthData,
 } from "@/lib/utils/tokenStorage";
 
-const API_BASE_URL =
+export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
-async function parseApiResponse(response) {
+export async function parseApiResponse(response) {
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
@@ -27,6 +27,39 @@ async function parseApiResponse(response) {
   return data;
 }
 
+export async function apiRequest(path, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: "include",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  });
+
+  return parseApiResponse(response);
+}
+
+export async function authenticatedApiRequest(path, options = {}) {
+  const accessToken = getAccessToken();
+
+  if (!accessToken) {
+    throw new Error("You are not logged in.");
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: "include",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      ...(options.headers || {}),
+    },
+  });
+
+  return parseApiResponse(response);
+}
+
 function saveLoginResponse(data) {
   saveAuthData({
     accessToken: data.access_token,
@@ -38,67 +71,54 @@ function saveLoginResponse(data) {
 }
 
 export async function registerCandidate({ name, email, password }) {
-  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+  return apiRequest("/auth/register", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       name,
       email,
       password,
     }),
   });
-
-  return parseApiResponse(response);
 }
 
 export async function loginCandidate({ email, password }) {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+  const data = await apiRequest("/auth/login", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       email,
       password,
     }),
   });
 
-  const data = await parseApiResponse(response);
   return saveLoginResponse(data);
 }
 
 export async function loginWithGoogle(idToken) {
-  const response = await fetch(`${API_BASE_URL}/auth/google`, {
+  const data = await apiRequest("/auth/google", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       id_token: idToken,
     }),
   });
 
-  const data = await parseApiResponse(response);
+  return saveLoginResponse(data);
+}
+
+export async function loginWithLinkedIn(code) {
+  const data = await apiRequest("/auth/linkedin", {
+    method: "POST",
+    body: JSON.stringify({
+      code,
+    }),
+  });
+
   return saveLoginResponse(data);
 }
 
 export async function getCurrentUser() {
-  const accessToken = getAccessToken();
-
-  if (!accessToken) {
-    throw new Error("You are not logged in.");
-  }
-
-  const response = await fetch(`${API_BASE_URL}/auth/me`, {
+  return authenticatedApiRequest("/auth/me", {
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
   });
-
-  return parseApiResponse(response);
 }
 
 export async function refreshAccessToken() {
@@ -109,21 +129,28 @@ export async function refreshAccessToken() {
     throw new Error("Session expired. Please login again.");
   }
 
-  const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+  const data = await apiRequest("/auth/refresh", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       refresh_token: refreshToken,
     }),
   });
-
-  const data = await parseApiResponse(response);
 
   saveAuthData({
     accessToken: data.access_token,
   });
 
   return data.access_token;
+}
+
+export async function getMyCandidateProfile() {
+  return authenticatedApiRequest("/candidate/me/profile", {
+    method: "GET",
+  });
+}
+
+export async function activateCandidate() {
+  return authenticatedApiRequest("/candidate/activate", {
+    method: "POST",
+  });
 }

@@ -2,10 +2,21 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { startLinkedInAuth } from "@/lib/utils/linkedinOAuth";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
-import { loginCandidate, loginWithGoogle } from "@/lib/api/authApi";
+import {
+  activateCandidate,
+  getMyCandidateProfile,
+  loginCandidate,
+  loginWithGoogle,
+} from "@/lib/api/authApi";
+import { getMyRecruiterProfile } from "@/lib/api/recruiterApi";
+import {
+  getSelectedLoginMode,
+  setSelectedLoginMode,
+} from "@/lib/utils/tokenStorage";
 
 function BriefcaseIcon() {
   return (
@@ -29,6 +40,28 @@ function BriefcaseIcon() {
       />
     </svg>
   );
+}
+
+function UserIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+      <path
+        d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M5 20a7 7 0 0 1 14 0"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function RecruiterIcon() {
+  return <BriefcaseIcon />;
 }
 
 function MailIcon() {
@@ -57,6 +90,7 @@ function LinkedInIcon() {
 export default function LoginCard() {
   const router = useRouter();
 
+  const [selectedMode, setSelectedMode] = useState("candidate");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -65,6 +99,21 @@ export default function LoginCard() {
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isCandidateSelected = selectedMode === "candidate";
+  const isRecruiterSelected = selectedMode === "recruiter";
+
+  useEffect(() => {
+    const savedMode = getSelectedLoginMode();
+    setSelectedMode(savedMode);
+  }, []);
+
+  function changeMode(mode) {
+    setSelectedMode(mode);
+    setSelectedLoginMode(mode);
+    setErrorMessage("");
+    setStatusMessage("");
+  }
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -75,7 +124,30 @@ export default function LoginCard() {
     }));
   }
 
-  function redirectCandidate() {
+  async function redirectAfterLogin(mode) {
+    setSelectedLoginMode(mode);
+
+    if (mode === "recruiter") {
+      try {
+        await getMyRecruiterProfile();
+        router.push("/recruiter/dashboard");
+      } catch {
+        router.push("/recruiter/profile");
+      }
+
+      return;
+    }
+
+    try {
+      await getMyCandidateProfile();
+    } catch {
+      try {
+        await activateCandidate();
+      } catch {
+        // Candidate page can still show its own API error if profile is unavailable.
+      }
+    }
+
     router.push("/candidate/upload-cv");
   }
 
@@ -99,7 +171,7 @@ export default function LoginCard() {
       });
 
       setStatusMessage("Login successful. Redirecting...");
-      redirectCandidate();
+      await redirectAfterLogin(selectedMode);
     } catch (error) {
       setErrorMessage(error.message || "Login failed. Please try again.");
     } finally {
@@ -117,7 +189,7 @@ export default function LoginCard() {
       await loginWithGoogle(idToken);
 
       setStatusMessage("Google login successful. Redirecting...");
-      redirectCandidate();
+      await redirectAfterLogin(selectedMode);
     } catch (error) {
       setErrorMessage(error.message || "Google login failed. Please try again.");
     } finally {
@@ -130,17 +202,23 @@ export default function LoginCard() {
   }
 
   function handleLinkedInLogin() {
-    setErrorMessage(
-      "LinkedIn login needs a backend LinkedIn OAuth endpoint. It will be connected after the LinkedIn app credentials are ready."
-    );
+    setErrorMessage("");
+    setStatusMessage("");
+
+    try {
+      setSelectedLoginMode(selectedMode);
+      startLinkedInAuth();
+    } catch (error) {
+      setErrorMessage(error.message || "LinkedIn login failed to start.");
+    }
   }
 
   return (
-    <section className="flex h-screen items-center justify-center overflow-hidden bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 px-5 pt-16">
-      <div className="w-full max-w-95 overflow-hidden rounded-3xl border border-white/70 bg-white/95 shadow-2xl shadow-blue-950/10">
+    <section className="flex min-h-screen items-center justify-center overflow-hidden bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 px-5 pt-20 pb-8">
+      <div className="w-full max-w-105 overflow-hidden rounded-3xl border border-white/70 bg-white/95 shadow-2xl shadow-blue-950/10">
         <div className="h-1 bg-linear-to-r from-blue-800 via-blue-600 to-sky-400" />
 
-        <div className="px-6 py-4 text-center">
+        <div className="px-6 py-5 text-center">
           <div className="mx-auto grid h-9 w-9 place-items-center rounded-xl bg-blue-700 text-white shadow-lg shadow-blue-700/25">
             <BriefcaseIcon />
           </div>
@@ -150,8 +228,54 @@ export default function LoginCard() {
           </h1>
 
           <p className="mt-1 text-[12px] leading-5 text-slate-500">
-            Sign in to continue your JobsEra journey.
+            Choose your JobsEra space before signing in.
           </p>
+
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => changeMode("candidate")}
+              className={`rounded-2xl border px-3 py-4 text-center transition ${
+                isCandidateSelected
+                  ? "border-blue-600 bg-blue-50 text-blue-700"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-blue-300"
+              }`}
+            >
+              <div
+                className={`mx-auto grid h-9 w-9 place-items-center rounded-full ${
+                  isCandidateSelected ? "bg-blue-700 text-white" : "bg-slate-100"
+                }`}
+              >
+                <UserIcon />
+              </div>
+              <p className="mt-2 text-sm font-extrabold">Job Seeker</p>
+              <p className="mt-1 text-[10px] font-semibold text-slate-400">
+                Profile, CV, jobs
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => changeMode("recruiter")}
+              className={`rounded-2xl border px-3 py-4 text-center transition ${
+                isRecruiterSelected
+                  ? "border-blue-600 bg-blue-50 text-blue-700"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-blue-300"
+              }`}
+            >
+              <div
+                className={`mx-auto grid h-9 w-9 place-items-center rounded-full ${
+                  isRecruiterSelected ? "bg-blue-700 text-white" : "bg-slate-100"
+                }`}
+              >
+                <RecruiterIcon />
+              </div>
+              <p className="mt-2 text-sm font-extrabold">Recruiter</p>
+              <p className="mt-1 text-[10px] font-semibold text-slate-400">
+                Company, jobs, hiring
+              </p>
+            </button>
+          </div>
 
           <form onSubmit={handleSubmit} className="mt-4 space-y-3 text-left">
             <input
@@ -228,9 +352,9 @@ export default function LoginCard() {
           <div className="my-3 h-px bg-slate-200" />
 
           <p className="text-[12px] leading-5 text-slate-500">
-            Secure access for job seekers and recruiters.
-            <br />
-            Manage your AI profile and applications.
+            {isRecruiterSelected
+              ? "Recruiters will continue to company setup or dashboard."
+              : "Job seekers will continue to CV upload and job discovery."}
           </p>
 
           <p className="mt-2 text-[12px] font-semibold text-slate-600">

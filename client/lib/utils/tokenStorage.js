@@ -1,6 +1,9 @@
 const ACCESS_TOKEN_KEY = "jobsera_access_token";
 const REFRESH_TOKEN_KEY = "jobsera_refresh_token";
 const USER_KEY = "jobsera_user";
+const LOGIN_MODE_KEY = "jobsera_login_mode";
+
+const VALID_LOGIN_MODES = ["candidate", "recruiter"];
 
 function isBrowser() {
   return typeof window !== "undefined";
@@ -45,6 +48,29 @@ export function getStoredUser() {
     clearAuthData();
     return null;
   }
+}
+
+export function setSelectedLoginMode(mode) {
+  if (!isBrowser()) return;
+
+  if (!VALID_LOGIN_MODES.includes(mode)) {
+    localStorage.setItem(LOGIN_MODE_KEY, "candidate");
+    return;
+  }
+
+  localStorage.setItem(LOGIN_MODE_KEY, mode);
+}
+
+export function getSelectedLoginMode() {
+  if (!isBrowser()) return "candidate";
+
+  const savedMode = localStorage.getItem(LOGIN_MODE_KEY);
+
+  if (!VALID_LOGIN_MODES.includes(savedMode)) {
+    return "candidate";
+  }
+
+  return savedMode;
 }
 
 export function clearAuthData() {

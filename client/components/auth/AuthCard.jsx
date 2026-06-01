@@ -5,7 +5,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
-import { loginWithGoogle, registerCandidate } from "@/lib/api/authApi";
+import {
+  activateCandidate,
+  loginCandidate,
+  loginWithGoogle,
+  registerCandidate,
+} from "@/lib/api/authApi";
+import { startLinkedInAuth } from "@/lib/utils/linkedinOAuth";
+import { setSelectedLoginMode } from "@/lib/utils/tokenStorage";
 
 function BriefcaseIcon() {
   return (
@@ -116,6 +123,13 @@ export default function AuthCard() {
   const isCandidateSelected = selectedRole === "candidate";
   const isRecruiterSelected = selectedRole === "recruiter";
 
+  function handleRoleChange(role) {
+    setSelectedRole(role);
+    setSelectedLoginMode(role);
+    setErrorMessage("");
+    setStatusMessage("");
+  }
+
   function handleChange(event) {
     const { name, value } = event.target;
 
@@ -126,15 +140,29 @@ export default function AuthCard() {
   }
 
   function validateForm() {
-    if (!isCandidateSelected) {
-      return "Recruiter registration is planned for the next sprint. Please continue as a Job Seeker for now.";
-    }
-
-    if (!formData.name || !formData.email || !formData.password) {
+    if (!formData.name.trim() || !formData.email.trim() || !formData.password) {
       return "Please fill in name, email, and password.";
     }
 
     return "";
+  }
+
+  async function redirectAfterRegister(role) {
+    setSelectedLoginMode(role);
+
+    if (role === "recruiter") {
+      router.push("/recruiter/profile");
+      return;
+    }
+
+    try {
+      await activateCandidate();
+    } catch {
+      // New email registration normally already creates candidate profile.
+      // If this fails, candidate page can still handle the next API state.
+    }
+
+    router.push("/candidate/upload-cv");
   }
 
   async function handleSubmit(event) {
@@ -152,6 +180,7 @@ export default function AuthCard() {
 
     try {
       setIsSubmitting(true);
+      setSelectedLoginMode(selectedRole);
 
       await registerCandidate({
         name: formData.name,
@@ -159,12 +188,22 @@ export default function AuthCard() {
         password: formData.password,
       });
 
-      setStatusMessage("Account created successfully. Redirecting to login...");
+      await loginCandidate({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      setStatusMessage(
+        isRecruiterSelected
+          ? "Account created. Redirecting to company setup..."
+          : "Account created. Redirecting to job seeker workspace..."
+      );
+
       setFormData(initialFormData);
 
       setTimeout(() => {
-        router.push("/login");
-      }, 900);
+        redirectAfterRegister(selectedRole);
+      }, 500);
     } catch (error) {
       setErrorMessage(error.message || "Registration failed. Please try again.");
     } finally {
@@ -176,20 +215,26 @@ export default function AuthCard() {
     setErrorMessage("");
     setStatusMessage("");
 
-    if (!isCandidateSelected) {
-      setErrorMessage(
-        "Google recruiter signup is planned for the next sprint. Please continue as a Job Seeker for now."
-      );
-      return;
-    }
-
     try {
       setIsSubmitting(true);
+      setSelectedLoginMode(selectedRole);
 
       await loginWithGoogle(idToken);
 
-      setStatusMessage("Google signup successful. Redirecting...");
-      router.push("/candidate/upload-cv");
+      setStatusMessage(
+        isRecruiterSelected
+          ? "Google signup successful. Redirecting to company setup..."
+          : "Google signup successful. Redirecting..."
+      );
+
+      setTimeout(() => {
+        if (selectedRole === "recruiter") {
+          router.push("/recruiter/profile");
+          return;
+        }
+
+        router.push("/candidate/upload-cv");
+      }, 500);
     } catch (error) {
       setErrorMessage(error.message || "Google signup failed. Please try again.");
     } finally {
@@ -202,33 +247,39 @@ export default function AuthCard() {
   }
 
   function handleLinkedInSignup() {
-    setErrorMessage(
-      "LinkedIn signup needs a backend LinkedIn OAuth endpoint. It will be connected after the LinkedIn app credentials are ready."
-    );
+    setErrorMessage("");
+    setStatusMessage("");
+
+    try {
+      setSelectedLoginMode(selectedRole);
+      startLinkedInAuth();
+    } catch (error) {
+      setErrorMessage(error.message || "LinkedIn signup failed to start.");
+    }
   }
 
   return (
     <section className="flex min-h-screen items-center justify-center overflow-hidden bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 px-5 pt-20 pb-8">
-      <div className="w-full max-w-95 overflow-hidden rounded-3xl border border-white/70 bg-white/95 shadow-2xl shadow-blue-950/10">
+      <div className="w-full max-w-105 overflow-hidden rounded-3xl border border-white/70 bg-white/95 shadow-2xl shadow-blue-950/10">
         <div className="h-1 bg-linear-to-r from-blue-800 via-blue-600 to-sky-400" />
 
-        <div className="px-6 py-4 text-center">
-          <div className="mx-auto grid h-9 w-9 place-items-center rounded-xl bg-blue-700 text-white shadow-lg shadow-blue-700/25">
+        <div className="px-6 py-5 text-center">
+          <div className="mx-auto grid h-10 w-10 place-items-center rounded-xl bg-blue-700 text-white shadow-lg shadow-blue-700/25">
             <BriefcaseIcon />
           </div>
 
-          <h1 className="mt-3 text-[24px] font-extrabold tracking-tight text-slate-950">
+          <h1 className="mt-3 text-[26px] font-extrabold tracking-tight text-slate-950">
             Join JobsEra
           </h1>
 
-          <p className="mt-1 text-[12px] leading-5 text-slate-500">
-            Select your role to tailor your AI-driven experience.
+          <p className="mt-1 text-[13px] leading-5 text-slate-500">
+            Select your workspace before creating your account.
           </p>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => setSelectedRole("candidate")}
+              onClick={() => handleRoleChange("candidate")}
               className={`group rounded-xl border px-3 py-4 transition ${
                 isCandidateSelected
                   ? "border-blue-600 bg-blue-50"
@@ -247,11 +298,14 @@ export default function AuthCard() {
               <p className="mt-2 text-sm font-bold text-slate-900">
                 Job Seeker
               </p>
+              <p className="mt-1 text-[10px] font-semibold text-slate-400">
+                CV, profile, jobs
+              </p>
             </button>
 
             <button
               type="button"
-              onClick={() => setSelectedRole("recruiter")}
+              onClick={() => handleRoleChange("recruiter")}
               className={`group rounded-xl border px-3 py-4 transition ${
                 isRecruiterSelected
                   ? "border-blue-600 bg-blue-50"
@@ -270,6 +324,9 @@ export default function AuthCard() {
               <p className="mt-2 text-sm font-bold text-slate-900">
                 Recruiter
               </p>
+              <p className="mt-1 text-[10px] font-semibold text-slate-400">
+                Company, hiring
+              </p>
             </button>
           </div>
 
@@ -282,7 +339,7 @@ export default function AuthCard() {
               onChange={handleChange}
               placeholder="Full name"
               autoComplete="name"
-              disabled={!isCandidateSelected || isSubmitting}
+              disabled={isSubmitting}
               className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-600 disabled:cursor-not-allowed disabled:bg-slate-100"
             />
 
@@ -294,7 +351,7 @@ export default function AuthCard() {
               onChange={handleChange}
               placeholder="Email address"
               autoComplete="email"
-              disabled={!isCandidateSelected || isSubmitting}
+              disabled={isSubmitting}
               className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-600 disabled:cursor-not-allowed disabled:bg-slate-100"
             />
 
@@ -306,7 +363,7 @@ export default function AuthCard() {
               onChange={handleChange}
               placeholder="Password e.g. Password@123"
               autoComplete="new-password"
-              disabled={!isCandidateSelected || isSubmitting}
+              disabled={isSubmitting}
               className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-600 disabled:cursor-not-allowed disabled:bg-slate-100"
             />
 
@@ -328,11 +385,15 @@ export default function AuthCard() {
 
             <button
               type="submit"
-              disabled={isSubmitting || !isCandidateSelected}
+              disabled={isSubmitting}
               className="flex w-full items-center justify-center gap-3 rounded-lg bg-blue-700 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-700/20 transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-blue-400"
             >
               <MailIcon />
-              {isSubmitting ? "Creating account..." : "Continue with Email"}
+              {isSubmitting
+                ? "Creating account..."
+                : isRecruiterSelected
+                ? "Create recruiter account"
+                : "Create job seeker account"}
             </button>
           </form>
 
@@ -347,7 +408,7 @@ export default function AuthCard() {
           <div className="grid grid-cols-2 gap-3">
             <GoogleAuthButton
               buttonText="signup_with"
-              disabled={isSubmitting || !isCandidateSelected}
+              disabled={isSubmitting}
               onGoogleSuccess={handleGoogleSignup}
               onGoogleError={handleGoogleError}
             />
@@ -355,7 +416,7 @@ export default function AuthCard() {
             <button
               type="button"
               onClick={handleLinkedInSignup}
-              disabled={isSubmitting || !isCandidateSelected}
+              disabled={isSubmitting}
               className="flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <LinkedInIcon /> LinkedIn
@@ -365,14 +426,18 @@ export default function AuthCard() {
           <div className="my-3 h-px bg-slate-200" />
 
           <p className="text-[12px] leading-5 text-slate-500">
-            Continue as a job seeker to build your AI profile.
-            <br />
-            Recruiter onboarding is planned for the next sprint.
+            {isRecruiterSelected
+              ? "Recruiters will continue to company setup after account creation."
+              : "Job seekers will continue to CV upload and job discovery."}
           </p>
 
           <p className="mt-2 text-[12px] font-semibold text-slate-600">
             Already have an account?{" "}
-            <Link href="/login" className="font-bold text-blue-700">
+            <Link
+              href="/login"
+              onClick={() => setSelectedLoginMode(selectedRole)}
+              className="font-bold text-blue-700"
+            >
               Log in
             </Link>
           </p>
