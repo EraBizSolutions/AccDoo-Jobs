@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { startLinkedInAuth } from "@/lib/utils/linkedinOAuth";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import {
   activateCandidate,
@@ -13,6 +12,7 @@ import {
   loginWithGoogle,
 } from "@/lib/api/authApi";
 import { getMyRecruiterProfile } from "@/lib/api/recruiterApi";
+import { startLinkedInAuth } from "@/lib/utils/linkedinOAuth";
 import {
   getSelectedLoginMode,
   setSelectedLoginMode,
@@ -58,10 +58,6 @@ function UserIcon() {
       />
     </svg>
   );
-}
-
-function RecruiterIcon() {
-  return <BriefcaseIcon />;
 }
 
 function MailIcon() {
@@ -144,7 +140,7 @@ export default function LoginCard() {
       try {
         await activateCandidate();
       } catch {
-        // Candidate page can still show its own API error if profile is unavailable.
+        // Candidate page handles unavailable profile state.
       }
     }
 
@@ -197,10 +193,6 @@ export default function LoginCard() {
     }
   }
 
-  function handleGoogleError(message) {
-    setErrorMessage(message || "Google login failed. Please try again.");
-  }
-
   function handleLinkedInLogin() {
     setErrorMessage("");
     setStatusMessage("");
@@ -214,42 +206,42 @@ export default function LoginCard() {
   }
 
   return (
-    <section className="flex min-h-screen items-center justify-center overflow-hidden bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 px-5 pt-20 pb-8">
-      <div className="w-full max-w-105 overflow-hidden rounded-3xl border border-white/70 bg-white/95 shadow-2xl shadow-blue-950/10">
-        <div className="h-1 bg-linear-to-r from-blue-800 via-blue-600 to-sky-400" />
+    <section className="flex min-h-screen items-center justify-center bg-[#F9FBFB] px-5 py-10 font-sans">
+      <div className="w-full max-w-[430px] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/70">
+        <div className="h-1 bg-[#F7631E]" />
 
-        <div className="px-6 py-5 text-center">
-          <div className="mx-auto grid h-9 w-9 place-items-center rounded-xl bg-blue-700 text-white shadow-lg shadow-blue-700/25">
+        <div className="px-6 py-6 text-center">
+          <div className="mx-auto grid h-11 w-11 place-items-center rounded-xl bg-[#F7631E] text-white shadow-sm">
             <BriefcaseIcon />
           </div>
 
-          <h1 className="mt-3 text-[24px] font-extrabold tracking-tight text-slate-950">
+          <h1 className="mt-4 text-[27px] font-medium tracking-tight text-[#202020]">
             Welcome back
           </h1>
 
-          <p className="mt-1 text-[12px] leading-5 text-slate-500">
+          <p className="mt-2 text-[13px] font-normal leading-5 text-[#585958]">
             Choose your JobsEra space before signing in.
           </p>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="mt-5 grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => changeMode("candidate")}
               className={`rounded-2xl border px-3 py-4 text-center transition ${
                 isCandidateSelected
-                  ? "border-blue-600 bg-blue-50 text-blue-700"
-                  : "border-slate-200 bg-white text-slate-700 hover:border-blue-300"
+                  ? "border-[#F7631E] bg-orange-50 text-[#F7631E]"
+                  : "border-slate-200 bg-white text-[#202020] hover:border-[#F7631E]"
               }`}
             >
               <div
-                className={`mx-auto grid h-9 w-9 place-items-center rounded-full ${
-                  isCandidateSelected ? "bg-blue-700 text-white" : "bg-slate-100"
+                className={`mx-auto grid h-10 w-10 place-items-center rounded-full ${
+                  isCandidateSelected ? "bg-[#F7631E] text-white" : "bg-slate-100"
                 }`}
               >
                 <UserIcon />
               </div>
-              <p className="mt-2 text-sm font-extrabold">Job Seeker</p>
-              <p className="mt-1 text-[10px] font-semibold text-slate-400">
+              <p className="mt-2 text-sm font-medium">Job Seeker</p>
+              <p className="mt-1 text-[11px] font-normal text-slate-400">
                 Profile, CV, jobs
               </p>
             </button>
@@ -259,55 +251,53 @@ export default function LoginCard() {
               onClick={() => changeMode("recruiter")}
               className={`rounded-2xl border px-3 py-4 text-center transition ${
                 isRecruiterSelected
-                  ? "border-blue-600 bg-blue-50 text-blue-700"
-                  : "border-slate-200 bg-white text-slate-700 hover:border-blue-300"
+                  ? "border-[#F7631E] bg-orange-50 text-[#F7631E]"
+                  : "border-slate-200 bg-white text-[#202020] hover:border-[#F7631E]"
               }`}
             >
               <div
-                className={`mx-auto grid h-9 w-9 place-items-center rounded-full ${
-                  isRecruiterSelected ? "bg-blue-700 text-white" : "bg-slate-100"
+                className={`mx-auto grid h-10 w-10 place-items-center rounded-full ${
+                  isRecruiterSelected ? "bg-[#F7631E] text-white" : "bg-slate-100"
                 }`}
               >
-                <RecruiterIcon />
+                <BriefcaseIcon />
               </div>
-              <p className="mt-2 text-sm font-extrabold">Recruiter</p>
-              <p className="mt-1 text-[10px] font-semibold text-slate-400">
+              <p className="mt-2 text-sm font-medium">Recruiter</p>
+              <p className="mt-1 text-[11px] font-normal text-slate-400">
                 Company, jobs, hiring
               </p>
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="mt-4 space-y-3 text-left">
+          <form onSubmit={handleSubmit} className="mt-5 space-y-3 text-left">
             <input
-              id="email"
               name="email"
               type="email"
               value={formData.email}
               onChange={handleChange}
               placeholder="Email address"
               autoComplete="email"
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-600"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-normal text-[#202020] outline-none transition placeholder:text-slate-300 focus:border-[#F7631E]"
             />
 
             <input
-              id="password"
               name="password"
               type="password"
               value={formData.password}
               onChange={handleChange}
               placeholder="Password"
               autoComplete="current-password"
-              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-600"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-normal text-[#202020] outline-none transition placeholder:text-slate-300 focus:border-[#F7631E]"
             />
 
             {errorMessage ? (
-              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-center text-[12px] font-semibold text-red-600">
+              <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-center text-[12px] font-normal text-red-600">
                 {errorMessage}
               </p>
             ) : null}
 
             {statusMessage ? (
-              <p className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-center text-[12px] font-semibold text-green-700">
+              <p className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-center text-[12px] font-normal text-green-700">
                 {statusMessage}
               </p>
             ) : null}
@@ -315,19 +305,19 @@ export default function LoginCard() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex w-full items-center justify-center gap-3 rounded-lg bg-blue-700 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-700/20 transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-blue-400"
+              className="flex w-full items-center justify-center gap-3 rounded-xl bg-[#F7631E] py-3 text-sm font-medium text-white transition hover:bg-[#e85512] disabled:cursor-not-allowed disabled:bg-orange-300"
             >
               <MailIcon />
               {isSubmitting ? "Logging in..." : "Login with Email"}
             </button>
           </form>
 
-          <div className="my-3 flex items-center gap-3">
-            <div className="h-px flex-1 bg-slate-200" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-300">
+          <div className="my-4 flex items-center gap-3">
+            <div className="h-22x flex-1 bg-slate-200" />
+            <span className="text-[9px] font-normal uppercase tracking-[0.18em] text-slate-300">
               or continue with
             </span>
-            <div className="h-px flex-1 bg-slate-200" />
+            <div className="h-22x flex-1 bg-slate-200" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -335,31 +325,33 @@ export default function LoginCard() {
               buttonText="signin_with"
               disabled={isSubmitting}
               onGoogleSuccess={handleGoogleLogin}
-              onGoogleError={handleGoogleError}
+              onGoogleError={(message) =>
+                setErrorMessage(message || "Google login failed. Please try again.")
+              }
             />
 
             <button
               type="button"
               onClick={handleLinkedInLogin}
               disabled={isSubmitting}
-              className="flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2 text-sm font-normal text-[#202020] shadow-sm transition hover:border-[#F7631E] hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <LinkedInIcon />
               LinkedIn
             </button>
           </div>
 
-          <div className="my-3 h-px bg-slate-200" />
+          <div className="my-4 h-22x bg-slate-200" />
 
-          <p className="text-[12px] leading-5 text-slate-500">
+          <p className="text-[12px] font-normal leading-5 text-[#585958]">
             {isRecruiterSelected
-              ? "Recruiters will continue to company setup or dashboard."
-              : "Job seekers will continue to CV upload and job discovery."}
+              ? "Recruiters continue to company setup or dashboard."
+              : "Job seekers continue to CV upload and job discovery."}
           </p>
 
-          <p className="mt-2 text-[12px] font-semibold text-slate-600">
+          <p className="mt-3 text-[12px] font-normal text-[#585958]">
             New to JobsEra?{" "}
-            <Link href="/register" className="font-bold text-blue-700">
+            <Link href="/register" className="font-medium text-[#F7631E]">
               Create account
             </Link>
           </p>

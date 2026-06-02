@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  FiEdit3,
+  FiPlus,
+  FiRefreshCw,
+  FiTrash2,
+  FiBriefcase,
+} from "react-icons/fi";
 
 import Navbar from "@/components/home/Navbar";
 import {
@@ -10,17 +17,38 @@ import {
   updateRecruiterJob,
 } from "@/lib/api/recruiterApi";
 
+const FILTERS = ["all", "active", "draft", "closed"];
+
+function statusClass(status) {
+  if (status === "active") {
+    return "bg-green-50 text-green-700";
+  }
+
+  if (status === "draft") {
+    return "bg-yellow-50 text-yellow-700";
+  }
+
+  if (status === "closed") {
+    return "bg-red-50 text-red-700";
+  }
+
+  return "bg-slate-100 text-slate-600";
+}
+
 export default function RecruiterJobsPage() {
   const [jobs, setJobs] = useState([]);
+  const [activeFilter, setActiveFilter] = useState("all");
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   async function loadJobs() {
+    setErrorMessage("");
+
     try {
       setIsLoading(true);
       const data = await listRecruiterJobs();
-      setJobs(data);
+      setJobs(Array.isArray(data) ? data : []);
     } catch (error) {
       setErrorMessage(error.message || "Could not load jobs.");
     } finally {
@@ -64,74 +92,129 @@ export default function RecruiterJobsPage() {
     }
   }
 
+  const filteredJobs = useMemo(() => {
+    if (activeFilter === "all") return jobs;
+
+    return jobs.filter((job) => job.status === activeFilter);
+  }, [jobs, activeFilter]);
+
   return (
-    <main className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 pt-20">
+    <main className="min-h-screen bg-[#F9FBFB] font-sans">
       <Navbar />
 
-      <section className="mx-auto max-w-6xl px-5 py-10">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <section className="mx-auto max-w-36.2517.5pxxl px-5 py-10">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-600">
+            <p className="text-sm font-normal uppercase tracking-[0.22em] text-[#F7631E]">
               Recruiter jobs
             </p>
-            <h1 className="mt-2 text-3xl font-extrabold text-slate-950">
+            <h1 className="mt-2 text-[34px] font-medium tracking-tight text-[#202020]">
               Manage job posts
             </h1>
+            <p className="mt-3 max-w-36.2530xl text-sm font-normal leading-6 text-[#585958]">
+              Create, edit, publish, draft, or close your job openings from one calm control room.
+            </p>
           </div>
 
-          <Link
-            href="/recruiter/jobs/create"
-            className="rounded-xl bg-blue-700 px-5 py-3 text-sm font-extrabold text-white shadow-lg shadow-blue-700/20"
-          >
-            + Create job
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={loadJobs}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-normal text-[#585958] shadow-sm transition hover:border-[#F7631E] hover:text-[#F7631E]"
+            >
+              <FiRefreshCw />
+              Refresh
+            </button>
+
+            <Link
+              href="/recruiter/jobs/create"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#F7631E] px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-[#e85512]"
+            >
+              <FiPlus />
+              Create job
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-7 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+          {FILTERS.map((filter) => {
+            const isSelected = activeFilter === filter;
+
+            return (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setActiveFilter(filter)}
+                className={`rounded-xl px-4 py-2 text-sm font-normal capitalize transition ${
+                  isSelected
+                    ? "bg-[#F7631E] text-white"
+                    : "text-[#585958] hover:bg-orange-50 hover:text-[#F7631E]"
+                }`}
+              >
+                {filter}
+              </button>
+            );
+          })}
         </div>
 
         {errorMessage ? (
-          <p className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+          <p className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-normal text-red-600">
             {errorMessage}
           </p>
         ) : null}
 
         {statusMessage ? (
-          <p className="mt-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-bold text-green-700">
+          <p className="mt-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-normal text-green-700">
             {statusMessage}
           </p>
         ) : null}
 
-        <div className="mt-8 overflow-hidden rounded-3xl border border-white/70 bg-white/95 shadow-xl shadow-blue-950/5">
+        <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/60">
           {isLoading ? (
-            <p className="p-6 text-sm font-bold text-slate-500">Loading jobs...</p>
-          ) : jobs.length ? (
+            <p className="p-6 text-sm font-normal text-[#585958]">
+              Loading jobs...
+            </p>
+          ) : filteredJobs.length ? (
             <div className="divide-y divide-slate-100">
-              {jobs.map((job) => (
-                <div key={job.id} className="p-5">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                      <p className="text-lg font-extrabold text-slate-950">
-                        {job.title}
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-slate-500">
-                        {job.company_name} · {job.location || "Location not added"} ·{" "}
-                        {job.work_mode || "Work mode not added"}
-                      </p>
-                      <p className="mt-2 text-xs font-extrabold uppercase text-blue-700">
-                        {job.status}
-                      </p>
+              {filteredJobs.map((job) => (
+                <div key={job.id} className="p-6">
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex gap-4">
+                      <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-orange-50 text-[#F7631E]">
+                        <FiBriefcase size={20} />
+                      </div>
+
+                      <div>
+                        <p className="text-xl font-medium text-[#202020]">
+                          {job.title}
+                        </p>
+                        <p className="mt-1 text-sm font-normal text-[#585958]">
+                          {job.company_name} · {job.location || "Location not added"} ·{" "}
+                          {job.work_mode || "Work mode not added"}
+                        </p>
+                        <span
+                          className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-normal uppercase tracking-wide ${statusClass(
+                            job.status
+                          )}`}
+                        >
+                          {job.status}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
                       <Link
                         href={`/recruiter/jobs/${job.id}/edit`}
-                        className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-extrabold text-blue-700"
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-normal text-[#585958] transition hover:border-[#F7631E] hover:text-[#F7631E]"
                       >
+                        <FiEdit3 />
                         Edit
                       </Link>
 
                       <button
                         type="button"
                         onClick={() => changeStatus(job.id, "active")}
-                        className="rounded-lg bg-green-50 px-3 py-2 text-xs font-extrabold text-green-700"
+                        className="rounded-lg bg-green-50 px-3 py-2 text-xs font-normal text-green-700"
                       >
                         Active
                       </button>
@@ -139,7 +222,7 @@ export default function RecruiterJobsPage() {
                       <button
                         type="button"
                         onClick={() => changeStatus(job.id, "draft")}
-                        className="rounded-lg bg-yellow-50 px-3 py-2 text-xs font-extrabold text-yellow-700"
+                        className="rounded-lg bg-yellow-50 px-3 py-2 text-xs font-normal text-yellow-700"
                       >
                         Draft
                       </button>
@@ -147,8 +230,9 @@ export default function RecruiterJobsPage() {
                       <button
                         type="button"
                         onClick={() => closeJob(job.id)}
-                        className="rounded-lg bg-red-50 px-3 py-2 text-xs font-extrabold text-red-700"
+                        className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-normal text-red-700"
                       >
+                        <FiTrash2 />
                         Close
                       </button>
                     </div>
@@ -157,9 +241,20 @@ export default function RecruiterJobsPage() {
               ))}
             </div>
           ) : (
-            <p className="p-6 text-sm font-bold text-slate-500">
-              No jobs yet. Create your first job post.
-            </p>
+            <div className="p-10 text-center">
+              <p className="text-base font-medium text-[#202020]">
+                No jobs found.
+              </p>
+              <p className="mt-2 text-sm font-normal text-[#585958]">
+                Create your first job post or change the filter.
+              </p>
+              <Link
+                href="/recruiter/jobs/create"
+                className="mt-5 inline-flex rounded-xl bg-[#F7631E] px-5 py-3 text-sm font-medium text-white"
+              >
+                Create job
+              </Link>
+            </div>
           )}
         </div>
       </section>

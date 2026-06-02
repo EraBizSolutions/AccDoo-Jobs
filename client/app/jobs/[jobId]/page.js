@@ -6,16 +6,51 @@ import { useParams, useRouter } from "next/navigation";
 import {
   FiArrowLeft,
   FiBriefcase,
-  FiClock,
   FiDollarSign,
   FiMapPin,
-  FiUsers,
+  FiPhone,
+  FiShare2,
 } from "react-icons/fi";
-import { LuSparkles } from "react-icons/lu";
+import { MdVerified } from "react-icons/md";
 
 import Navbar from "@/components/home/Navbar";
+import Footer from "@/components/home/Footer";
 import { getPublicJobDetails } from "@/lib/api/jobsApi";
 import { getStoredUser } from "@/lib/utils/tokenStorage";
+
+function getCompanyInitials(companyName = "JE") {
+  return companyName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase())
+    .join("");
+}
+
+function formatSalary(job) {
+  if (!job?.salary_min && !job?.salary_max) return "Salary not disclosed";
+
+  if (job.salary_min && job.salary_max) {
+    return `LKR ${Number(job.salary_min).toLocaleString()} - ${Number(
+      job.salary_max
+    ).toLocaleString()}/month`;
+  }
+
+  if (job.salary_min) {
+    return `From LKR ${Number(job.salary_min).toLocaleString()}/month`;
+  }
+
+  return `Up to LKR ${Number(job.salary_max).toLocaleString()}/month`;
+}
+
+function formatValue(value, fallback = "Not added") {
+  if (!value) return fallback;
+
+  return String(value)
+    .split("-")
+    .map((word) => word[0]?.toUpperCase() + word.slice(1))
+    .join("-");
+}
 
 function getSkillTags(requiredSkills) {
   if (!requiredSkills) return [];
@@ -26,26 +61,76 @@ function getSkillTags(requiredSkills) {
     .filter(Boolean);
 }
 
-function formatSalary(job) {
-  if (!job?.salary_min && !job?.salary_max) return "Salary not disclosed";
-
-  if (job.salary_min && job.salary_max) {
-    return `LKR ${job.salary_min.toLocaleString()} - ${job.salary_max.toLocaleString()}`;
+function buildDescriptionSections(description) {
+  if (!description) {
+    return [
+      {
+        title: "About the role",
+        items: [
+          "This role is open for candidates who are ready to work with a growing team.",
+          "The recruiter has shared the key job details through JobsEra.",
+          "Apply after reviewing the role, location, and required skills.",
+        ],
+      },
+    ];
   }
 
-  if (job.salary_min) {
-    return `From LKR ${job.salary_min.toLocaleString()}`;
+  const lines = description
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length <= 1) {
+    return [
+      {
+        title: "About the role",
+        paragraph: description,
+      },
+    ];
   }
 
-  return `Up to LKR ${job.salary_max.toLocaleString()}`;
+  return [
+    {
+      title: "About the role",
+      paragraph: lines[0],
+    },
+    {
+      title: "What you’ll do",
+      items: lines.slice(1, 6),
+    },
+  ];
 }
 
-function MetaPill({ icon, children }) {
+function DetailMeta({ icon, children }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600">
+    <span className="inline-flex items-center gap-2 text-sm font-normal text-[#585958]">
       {icon}
       {children}
     </span>
+  );
+}
+
+function JobSection({ title, paragraph, items }) {
+  return (
+    <section className="mt-7">
+      <h2 className="text-[24px] font-medium tracking-tight text-[#202020]">
+        {title}
+      </h2>
+
+      {paragraph ? (
+        <p className="mt-3 max-w-[450px]xl text-[15px] font-normal leading-7 text-[#202020]">
+          {paragraph}
+        </p>
+      ) : null}
+
+      {items?.length ? (
+        <ul className="mt-3 list-disc space-y-2 pl-6 text-[15px] font-normal leading-7 text-[#585958]">
+          {items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
   );
 }
 
@@ -89,198 +174,230 @@ export default function PublicJobDetailsPage() {
     router.push("/candidate/upload-cv");
   }
 
+  const companyName = job?.company_name || "JobsEra Company";
+  const companyInitials = getCompanyInitials(companyName);
   const skills = getSkillTags(job?.required_skills);
+  const sections = buildDescriptionSections(job?.description);
 
   return (
-    <main className="min-h-screen bg-slate-50 pt-20">
+    <main className="min-h-screen bg-white font-sans">
       <Navbar />
 
-      <section className="mx-auto max-w-7xl px-5 py-8">
+      <section className="mx-auto max-w-36.2517.5pxxl px-5 py-8 lg:py-12">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-sm font-extrabold text-blue-700"
+          className="inline-flex items-center gap-2 text-sm font-normal text-[#F7631E] transition hover:text-[#e85512]"
         >
           <FiArrowLeft />
           Back to jobs
         </Link>
 
         {isLoading ? (
-          <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-8 text-sm font-bold text-slate-500">
+          <div className="mt-8 rounded-2xl border border-slate-200 bg-[#F9FBFB] p-8 text-sm font-normal text-[#585958]">
             Loading job details...
           </div>
         ) : errorMessage ? (
-          <div className="mt-8 rounded-3xl border border-red-200 bg-red-50 p-8">
-            <p className="text-sm font-bold text-red-600">{errorMessage}</p>
+          <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-8">
+            <p className="text-sm font-normal text-red-600">{errorMessage}</p>
+
             <Link
               href="/"
-              className="mt-4 inline-flex rounded-xl bg-blue-700 px-5 py-3 text-sm font-black text-white"
+              className="mt-4 inline-flex rounded-xl bg-[#F7631E] px-5 py-3 text-sm font-medium text-white"
             >
               Go back home
             </Link>
           </div>
         ) : job ? (
-          <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
-            <div className="space-y-6">
-              <section className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
-                <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-blue-600">
-                      JobsEra verified role
-                    </p>
+          <>
+            <section className="mt-8 border-b border-slate-200 pb-9">
+              <div className="flex flex-col gap-7 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex gap-5">
+                  <div className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-[#202020] text-lg font-medium text-[#F7631E]">
+                    {companyInitials}
+                  </div>
 
-                    <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 md:text-4xl">
-                      {job.title}
+                  <div>
+                    <h1 className="text-[36px] font-medium tracking-tight text-[#202020] md:text-[44px]">
+                      {job.title || "Untitled role"}
                     </h1>
 
-                    <p className="mt-3 text-base font-bold text-slate-600">
-                      {job.company_name} · {job.location || "Location not added"}
-                    </p>
-                  </div>
-
-                  <div className="grid h-14 w-14 place-items-center rounded-2xl bg-blue-50 text-xl font-black text-blue-700">
-                    {job.company_name?.slice(0, 2)?.toUpperCase() || "JE"}
-                  </div>
-                </div>
-
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <MetaPill icon={<FiDollarSign />}>{formatSalary(job)}</MetaPill>
-                  <MetaPill icon={<FiBriefcase />}>
-                    {job.job_type || "Job type not added"}
-                  </MetaPill>
-                  <MetaPill icon={<FiClock />}>
-                    {job.work_mode || "Work mode not added"}
-                  </MetaPill>
-                  <MetaPill icon={<FiMapPin />}>
-                    {job.location || "Location not added"}
-                  </MetaPill>
-                </div>
-              </section>
-
-              <section className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
-                <h2 className="text-xl font-black text-slate-950">
-                  Strong Candidate Alignment
-                </h2>
-
-                <div className="mt-5 rounded-3xl border border-blue-100 bg-blue-50 p-5">
-                  <div className="flex flex-col gap-5 md:flex-row md:items-center">
-                    <div className="grid h-24 w-24 shrink-0 place-items-center rounded-full border-4 border-blue-600 bg-white text-center">
-                      <div>
-                        <p className="text-2xl font-black text-blue-700">82%</p>
-                        <p className="text-[10px] font-black uppercase text-blue-500">
-                          match
-                        </p>
-                      </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <p className="text-lg font-normal text-[#F7631E]">
+                        {companyName}
+                      </p>
+                      <MdVerified className="text-[#2b7a66]" size={18} />
                     </div>
 
-                    <div>
-                      <p className="flex items-center gap-2 text-lg font-black text-slate-950">
-                        <LuSparkles className="text-blue-700" />
-                        AI-powered job fit preview
-                      </p>
-                      <p className="mt-2 text-sm font-medium leading-6 text-slate-600">
-                        JobsEra can calculate stronger matching after the candidate
-                        uploads a CV. This preview is based on job skills and role data.
-                      </p>
+                    <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+                      <DetailMeta icon={<FiBriefcase size={16} />}>
+                        {formatValue(job.job_type, "Job type not added")}
+                      </DetailMeta>
 
-                      {skills.length ? (
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          {skills.map((skill) => (
-                            <span
-                              key={skill}
-                              className="rounded-full bg-white px-3 py-1 text-xs font-extrabold text-blue-700"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
+                      <DetailMeta icon={<FiMapPin size={16} />}>
+                        {job.location || "Location not added"}
+                      </DetailMeta>
+
+                      <DetailMeta icon={<FiDollarSign size={16} />}>
+                        {formatSalary(job)}
+                      </DetailMeta>
                     </div>
                   </div>
                 </div>
-              </section>
 
-              <section className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
-                <h2 className="text-xl font-black text-slate-950">
-                  About the role
-                </h2>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={handleApplyClick}
+                    className="rounded-lg bg-[#F7631E] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#e85512]"
+                  >
+                    Apply for this job
+                  </button>
 
-                <p className="mt-4 whitespace-pre-line text-sm font-medium leading-7 text-slate-600">
-                  {job.description}
-                </p>
-              </section>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-5 py-3 text-sm font-normal text-[#585958] transition hover:border-[#F7631E] hover:text-[#F7631E]"
+                  >
+                    <FiShare2 />
+                    Share
+                  </button>
+                </div>
+              </div>
+            </section>
 
-              <section className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
-                <h2 className="text-xl font-black text-slate-950">
-                  Required skills
-                </h2>
+            <div className="grid gap-10 py-9 lg:grid-cols-[1fr_330px]">
+              <article>
+                {sections.map((section) => (
+                  <JobSection
+                    key={section.title}
+                    title={section.title}
+                    paragraph={section.paragraph}
+                    items={section.items}
+                  />
+                ))}
+
+                <JobSection
+                  title="What we’re looking for"
+                  items={[
+                    "Clear communication and a professional work attitude.",
+                    "Ability to understand requirements and complete assigned tasks.",
+                    "Relevant skills or experience connected to this role.",
+                    "Willingness to learn, improve, and work with the team.",
+                  ]}
+                />
 
                 {skills.length ? (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {skills.map((skill) => (
-                      <span
-                        key={skill}
-                        className="rounded-full bg-slate-100 px-3 py-1 text-sm font-bold text-slate-700"
-                      >
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-4 text-sm font-semibold text-slate-500">
-                    Skills were not added for this job.
+                  <section className="mt-7">
+                    <h2 className="text-[24px] font-medium tracking-tight text-[#202020]">
+                      Skills
+                    </h2>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {skills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="rounded-full border border-slate-200 bg-[#F9FBFB] px-4 py-2 text-sm font-normal text-[#585958]"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
+
+                <section className="mt-8 border-t border-slate-200 pt-7">
+                  <h2 className="text-[24px] font-medium tracking-tight text-[#202020]">
+                    Apply
+                  </h2>
+
+                  <p className="mt-2 text-sm font-normal text-[#585958]">
+                    Login and upload your CV to continue with this application.
                   </p>
-                )}
-              </section>
-            </div>
 
-            <aside className="space-y-5">
-              <div className="sticky top-24 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <button
-                  type="button"
-                  onClick={handleApplyClick}
-                  className="w-full rounded-xl bg-blue-700 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-700/20 transition hover:bg-blue-800"
-                >
-                  Apply now
-                </button>
+                  <button
+                    type="button"
+                    onClick={handleApplyClick}
+                    className="mt-4 rounded-lg bg-[#F7631E] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#e85512]"
+                  >
+                    Apply now
+                  </button>
+                </section>
+              </article>
 
-                <button
-                  type="button"
-                  className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50"
-                >
-                  Save job
-                </button>
-
-                <div className="mt-6 border-t border-slate-100 pt-5">
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+              <aside className="space-y-5">
+                <div className="rounded-2xl border border-slate-200 bg-[#F9FBFB] p-6">
+                  <p className="text-xs font-normal uppercase tracking-[0.2em] text-[#F7631E]">
                     Quick facts
                   </p>
 
-                  <div className="mt-4 space-y-3 text-sm font-bold text-slate-600">
-                    <p className="flex items-center justify-between">
-                      <span className="inline-flex items-center gap-2">
-                        <FiUsers /> Applicants
-                      </span>
-                      <span>New</span>
-                    </p>
-
-                    <p className="flex items-center justify-between">
+                  <div className="mt-5 space-y-4 text-sm font-normal text-[#585958]">
+                    <p className="flex items-center justify-between gap-4">
                       <span>Status</span>
-                      <span className="rounded-full bg-green-50 px-2 py-1 text-xs font-black uppercase text-green-700">
-                        {job.status}
+                      <span className="rounded-full bg-green-50 px-3 py-1 text-xs text-green-700">
+                        {job.status || "active"}
                       </span>
                     </p>
 
-                    <p className="flex items-center justify-between">
-                      <span>Company</span>
-                      <span>{job.company_name}</span>
+                    <p className="flex items-center justify-between gap-4">
+                      <span>Work mode</span>
+                      <span>{formatValue(job.work_mode, "Not added")}</span>
+                    </p>
+
+                    <p className="flex items-center justify-between gap-4">
+                      <span>Job type</span>
+                      <span>{formatValue(job.job_type, "Not added")}</span>
+                    </p>
+
+                    <p className="flex items-center justify-between gap-4">
+                      <span>Salary</span>
+                      <span className="text-right">{formatSalary(job)}</span>
                     </p>
                   </div>
                 </div>
-              </div>
-            </aside>
-          </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="grid h-12 w-12 place-items-center rounded-xl bg-[#202020] text-sm font-medium text-[#F7631E]">
+                      {companyInitials}
+                    </div>
+
+                    <div>
+                      <p className="text-base font-medium text-[#202020]">
+                        {companyName}
+                      </p>
+                      <p className="text-sm font-normal text-[#585958]">
+                        Hiring through JobsEra
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-4 text-sm font-normal leading-6 text-[#585958]">
+                    This recruiter is managing active openings through JobsEra.
+                    Candidate matching becomes smarter after CV upload.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-orange-100 bg-orange-50 p-6">
+                  <p className="text-base font-medium text-[#202020]">
+                    Need help?
+                  </p>
+
+                  <p className="mt-2 text-sm font-normal leading-6 text-[#585958]">
+                    If the role looks suitable, apply through your candidate
+                    workspace and keep your CV updated.
+                  </p>
+
+                  <p className="mt-4 inline-flex items-center gap-2 text-sm font-normal text-[#F7631E]">
+                    <FiPhone />
+                    JobsEra candidate support
+                  </p>
+                </div>
+              </aside>
+            </div>
+          </>
         ) : null}
       </section>
+
+      <Footer />
     </main>
   );
 }

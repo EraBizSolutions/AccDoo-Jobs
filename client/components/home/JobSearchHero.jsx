@@ -1,195 +1,436 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  FiSearch,
+  FiCheck,
+  FiChevronDown,
   FiMapPin,
+  FiSearch,
   FiSliders,
-  FiUsers,
-  FiBriefcase,
 } from "react-icons/fi";
-import { LuSparkles } from "react-icons/lu";
 
-import { jobFilters } from "@/lib/constants/homeData";
-import { getStoredUser } from "@/lib/utils/tokenStorage";
+const GOOGLE_MAPS_SCRIPT_ID = "google-maps-places-script";
 
-export default function JobSearchHero() {
-  const [currentUser, setCurrentUser] = useState(null);
+const initialFilters = {
+  search: "",
+  location: "",
+  jobType: "",
+  workMode: "",
+  salaryRange: "",
+  techStacks: [],
+};
+
+const FILTER_GROUPS = {
+  jobType: [
+    { label: "Job Type", value: "" },
+    { label: "Internship", value: "internship" },
+    { label: "Full-time", value: "full-time" },
+    { label: "Part-time", value: "part-time" },
+    { label: "Contract", value: "contract" },
+  ],
+  workMode: [
+    { label: "Modality", value: "" },
+    { label: "Onsite", value: "onsite" },
+    { label: "Hybrid", value: "hybrid" },
+    { label: "Remote", value: "remote" },
+  ],
+  salaryRange: [
+    { label: "Salary", value: "" },
+    { label: "Below 50K", value: "0-50000" },
+    { label: "50K - 100K", value: "50000-100000" },
+    { label: "100K - 200K", value: "100000-200000" },
+    { label: "Above 200K", value: "200000+" },
+  ],
+};
+
+const TECH_STACKS = [
+  { label: "React", value: "react" },
+  { label: "Next.js", value: "next" },
+  { label: "FastAPI", value: "fastapi" },
+  { label: "Python", value: "python" },
+  { label: "JavaScript", value: "javascript" },
+  { label: "PostgreSQL", value: "postgresql" },
+  { label: "MongoDB", value: "mongodb" },
+  { label: "Node.js", value: "node" },
+];
+
+function publishJobFilters(filters) {
+  window.dispatchEvent(
+    new CustomEvent("jobsera:jobFiltersChanged", {
+      detail: filters,
+    })
+  );
+}
+
+function loadGoogleMapsScript(apiKey) {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined") return;
+
+    if (window.google?.maps?.places) {
+      resolve();
+      return;
+    }
+
+    const existingScript = document.getElementById(GOOGLE_MAPS_SCRIPT_ID);
+
+    if (existingScript) {
+      existingScript.addEventListener("load", resolve, { once: true });
+      existingScript.addEventListener("error", reject, { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = GOOGLE_MAPS_SCRIPT_ID;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = resolve;
+    script.onerror = reject;
+
+    document.body.appendChild(script);
+  });
+}
+
+function getSelectedLabel(options, value) {
+  return options.find((option) => option.value === value)?.label || options[0].label;
+}
+
+function SingleFilterDropdown({ name, value, options, onChange }) {
+  const wrapperRef = useRef(null);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    const storedUser = getStoredUser();
-    setCurrentUser(storedUser);
+    function handleOutsideClick(event) {
+      if (!wrapperRef.current?.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
   }, []);
 
-  const isLoggedIn = Boolean(currentUser);
+  function handleSelect(nextValue) {
+    onChange(name, nextValue);
+    setIsOpen(false);
+  }
 
   return (
-    <section className="relative overflow-hidden bg-linear-to-br from-white via-sky-50 to-blue-100 px-6 pt-28 pb-12 lg:px-8">
-      <div className="absolute -right-28 top-24 h-80 w-80 rounded-full border-[22px] border-cyan-300/70" />
+    <div ref={wrapperRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen((current) => !current)}
+        className={`inline-flex min-w-[145px] items-center justify-between gap-5 rounded-lg border bg-white px-5 py-3 text-[15px] font-normal text-[#202020] transition ${
+          isOpen
+            ? "border-[#F7631E] shadow-sm"
+            : "border-slate-200 hover:border-[#F7631E]"
+        }`}
+      >
+        {getSelectedLabel(options, value)}
+        <FiChevronDown
+          size={17}
+          className={`transition ${isOpen ? "rotate-180 text-[#F7631E]" : ""}`}
+        />
+      </button>
 
-      <div className="relative mx-auto max-w-7xl">
-        <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
-          <div>
-            <span className="inline-flex rounded-full bg-blue-100 px-4 py-2 text-xs font-bold uppercase tracking-wider text-blue-700">
-              AI job matching workspace
-            </span>
+      {isOpen ? (
+        <div className="absolute left-0 top-[calc(100%+8px)] z-40 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white py-2 shadow-2xl shadow-slate-900/10">
+          {options.map((option) => (
+            <button
+              key={`${name}-${option.label}`}
+              type="button"
+              onClick={() => handleSelect(option.value)}
+              className={`block w-full px-4 py-2.5 text-left text-sm font-normal transition ${
+                option.value === value
+                  ? "bg-orange-50 text-[#F7631E]"
+                  : "text-[#202020] hover:bg-slate-50"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
-            <h1 className="mt-6 max-w-3xl text-[42px] font-extrabold leading-tight tracking-tight text-slate-950 md:text-[56px]">
-              Jobs, talent and hiring{" "}
-              <span className="bg-linear-to-r from-blue-800 to-sky-500 bg-clip-text text-transparent">
-                reimagined for the AI era
-              </span>
-            </h1>
+function MultiTechStackDropdown({ selectedValues, onChange }) {
+  const wrapperRef = useRef(null);
+  const [isOpen, setIsOpen] = useState(false);
 
-            <p className="mt-5 max-w-2xl text-[16px] leading-8 text-slate-600">
-              {isLoggedIn
-                ? "Welcome back. Your AI-powered job discovery workspace is ready."
-                : "Explore active roles, create your candidate profile, and unlock AI-powered job matches after signing in."}
-            </p>
-          </div>
+  useEffect(() => {
+    function handleOutsideClick(event) {
+      if (!wrapperRef.current?.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
 
-          <div className="hidden lg:block">
-            {isLoggedIn ? (
-              <div className="rounded-3xl bg-white/90 p-6 shadow-2xl shadow-blue-950/10 ring-1 ring-slate-100">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Recommended Match
-                </p>
+    document.addEventListener("mousedown", handleOutsideClick);
 
-                <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="text-xl font-extrabold text-slate-950">
-                        Senior Frontend Engineer
-                      </h3>
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, []);
 
-                      <p className="mt-1 text-sm text-slate-500">
-                        92% match · React · Hybrid
-                      </p>
-                    </div>
+  function toggleTechStack(value) {
+    const alreadySelected = selectedValues.includes(value);
 
-                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-extrabold text-blue-700">
-                      <LuSparkles size={12} />
-                      AI Pick
-                    </span>
-                  </div>
+    if (alreadySelected) {
+      onChange(
+        "techStacks",
+        selectedValues.filter((item) => item !== value)
+      );
+      return;
+    }
 
-                  <div className="mt-5 h-2 rounded-full bg-slate-200">
-                    <div className="h-2 w-[92%] rounded-full bg-blue-700" />
-                  </div>
+    onChange("techStacks", [...selectedValues, value]);
+  }
 
-                  <p className="mt-3 text-xs font-bold text-blue-700">
-                    Strong match based on your uploaded CV and frontend skills.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-3xl bg-white/90 p-6 shadow-2xl shadow-blue-950/10 ring-1 ring-slate-100">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Public job discovery
-                </p>
+  const label =
+    selectedValues.length === 0
+      ? "Tech Stack"
+      : `${selectedValues.length} selected`;
 
-                <div className="mt-5 grid gap-4">
-                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
-                    <div className="flex items-center gap-3">
-                      <div className="grid h-11 w-11 place-items-center rounded-xl bg-blue-100 text-blue-700">
-                        <FiBriefcase size={20} />
-                      </div>
+  return (
+    <div ref={wrapperRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen((current) => !current)}
+        className={`inline-flex min-w-[160px] items-center justify-between gap-5 rounded-lg border bg-white px-5 py-3 text-[15px] font-normal text-[#202020] transition ${
+          isOpen
+            ? "border-[#F7631E] shadow-sm"
+            : "border-slate-200 hover:border-[#F7631E]"
+        }`}
+      >
+        {label}
+        <FiChevronDown
+          size={17}
+          className={`transition ${isOpen ? "rotate-180 text-[#F7631E]" : ""}`}
+        />
+      </button>
 
-                      <div>
-                        <h3 className="text-lg font-extrabold text-slate-950">
-                          Browse active jobs
-                        </h3>
-                        <p className="mt-1 text-sm text-slate-500">
-                          View featured openings from trusted companies.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+      {isOpen ? (
+        <div className="absolute left-0 top-[calc(100%+8px)] z-40 w-60 overflow-hidden rounded-xl border border-slate-200 bg-white py-2 shadow-2xl shadow-slate-900/10">
+          {TECH_STACKS.map((option) => {
+            const isSelected = selectedValues.includes(option.value);
 
-                  <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
-                    <div className="flex items-center gap-3">
-                      <div className="grid h-11 w-11 place-items-center rounded-xl bg-white text-blue-700">
-                        <LuSparkles size={20} />
-                      </div>
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => toggleTechStack(option.value)}
+                className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm font-normal transition ${
+                  isSelected
+                    ? "bg-orange-50 text-[#F7631E]"
+                    : "text-[#202020] hover:bg-slate-50"
+                }`}
+              >
+                {option.label}
+                {isSelected ? <FiCheck size={16} /> : null}
+              </button>
+            );
+          })}
 
-                      <div>
-                        <h3 className="text-lg font-extrabold text-slate-950">
-                          Unlock AI matches
-                        </h3>
-                        <p className="mt-1 text-sm text-slate-500">
-                          Login and upload your CV to see personalized match
-                          scores.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+          {selectedValues.length ? (
+            <button
+              type="button"
+              onClick={() => onChange("techStacks", [])}
+              className="mt-1 block w-full border-t border-slate-100 px-4 py-2.5 text-left text-sm font-normal text-slate-500 hover:bg-slate-50"
+            >
+              Clear tech stack
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
-                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
-                    <div className="flex items-center gap-3">
-                      <div className="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 text-slate-700">
-                        <FiUsers size={20} />
-                      </div>
+export default function JobSearchHero() {
+  const locationInputRef = useRef(null);
 
-                      <div>
-                        <h3 className="text-lg font-extrabold text-slate-950">
-                          Smarter hiring journey
-                        </h3>
-                        <p className="mt-1 text-sm text-slate-500">
-                          Candidate matching becomes available after profile
-                          setup.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+  const [filters, setFilters] = useState(initialFilters);
+  const [locationError, setLocationError] = useState("");
+
+  useEffect(() => {
+    publishJobFilters(filters);
+  }, [filters]);
+
+  useEffect(() => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+    if (!apiKey) {
+      setLocationError("Google location key missing.");
+      return;
+    }
+
+    let autocompleteInstance = null;
+    let isMounted = true;
+
+    async function initializeGooglePlaces() {
+      try {
+        await loadGoogleMapsScript(apiKey);
+
+        if (!isMounted || !locationInputRef.current) return;
+
+        autocompleteInstance = new window.google.maps.places.Autocomplete(
+          locationInputRef.current,
+          {
+            types: ["(cities)"],
+            componentRestrictions: { country: "lk" },
+            fields: ["formatted_address", "name"],
+          }
+        );
+
+        autocompleteInstance.addListener("place_changed", () => {
+          const place = autocompleteInstance.getPlace();
+          const selectedLocation =
+            place.formatted_address || place.name || locationInputRef.current.value;
+
+          setFilters((currentFilters) => ({
+            ...currentFilters,
+            location: selectedLocation,
+          }));
+        });
+      } catch {
+        setLocationError("Google location suggestions failed to load.");
+      }
+    }
+
+    initializeGooglePlaces();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  function updateFilter(name, value) {
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      [name]: value,
+    }));
+  }
+
+  function handleInputChange(event) {
+    const { name, value } = event.target;
+    updateFilter(name, value);
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    publishJobFilters(filters);
+  }
+
+  function handleClear() {
+    setFilters(initialFilters);
+    publishJobFilters(initialFilters);
+
+    if (locationInputRef.current) {
+      locationInputRef.current.value = "";
+    }
+  }
+
+  return (
+    <section className="bg-[#F9FBFB] px-6 pt-14 pb-0 font-sans lg:px-8">
+      <div className="mx-auto max-w-36.2517.5pxxl">
+        <div className="max-w-[450px]xl pb-20">
+          <h1 className="max-w-[450px]xl text-[38px] font-medium leading-[1.15] tracking-tight text-[#202020] md:text-[54px] lg:text-[60px]">
+            Connect talent with opportunity through smarter hiring
+          </h1>
         </div>
 
-        <div className="mt-10 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/70">
-          <div className="grid gap-3 md:grid-cols-[1fr_260px_170px]">
-            <div className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-4">
-              <FiSearch className="text-slate-400" size={20} />
+        <form
+          onSubmit={handleSubmit}
+          className="-mt-8 rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/70"
+        >
+          <div className="grid gap-0 lg:grid-cols-[1fr_1px_1fr_170px]">
+            <label className="flex items-center gap-5 px-7 py-6">
+              <FiSearch className="shrink-0 text-slate-400" size={25} />
               <input
-                placeholder="Search by job title, company, or keywords..."
-                className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+                name="search"
+                value={filters.search}
+                onChange={handleInputChange}
+                placeholder="Job title or keywords"
+                className="w-full bg-transparent text-[18px] font-normal text-[#585958] outline-none placeholder:text-slate-300"
               />
-            </div>
+            </label>
 
-            <div className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-4">
-              <FiMapPin className="text-slate-400" size={20} />
+            <div className="hidden bg-slate-200 lg:block" />
+
+            <label className="flex items-center gap-5 border-t border-slate-100 px-7 py-6 lg:border-t-0">
+              <FiMapPin className="shrink-0 text-slate-400" size={25} />
               <input
-                placeholder="City, state"
-                className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+                ref={locationInputRef}
+                name="location"
+                value={filters.location}
+                onChange={handleInputChange}
+                placeholder="Anywhere"
+                autoComplete="off"
+                className="w-full bg-transparent text-[18px] font-normal text-[#585958] outline-none placeholder:text-slate-300"
               />
-            </div>
+            </label>
 
-            <button className="rounded-xl bg-blue-700 px-6 py-4 text-sm font-bold text-white transition hover:bg-blue-800">
-              Find Roles
-            </button>
+            <div className="px-5 py-4">
+              <button
+                type="submit"
+                className="h-full w-full rounded-xl bg-[#F7631E] px-7 py-4 text-[16px] font-medium text-white transition hover:bg-[#e85512]"
+              >
+                Search
+              </button>
+            </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4">
-            <span className="flex items-center gap-1 text-xs font-semibold text-slate-500">
-              <FiSliders size={14} />
+          <div className="flex flex-wrap items-center gap-4 border-t border-slate-200 px-4 py-5 md:px-6">
+            <span className="inline-flex items-center gap-2 text-sm font-normal text-[#585958]">
+              <FiSliders size={16} />
               Filters:
             </span>
 
-            {jobFilters.map((filter) => (
-              <button
-                key={filter}
-                className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-700 hover:border-blue-500 hover:text-blue-700"
-              >
-                {filter}⌄
-              </button>
-            ))}
+            <SingleFilterDropdown
+              name="jobType"
+              value={filters.jobType}
+              options={FILTER_GROUPS.jobType}
+              onChange={updateFilter}
+            />
 
-            <button className="ml-auto text-xs font-bold text-blue-700">
-              Clear All
+            <SingleFilterDropdown
+              name="workMode"
+              value={filters.workMode}
+              options={FILTER_GROUPS.workMode}
+              onChange={updateFilter}
+            />
+
+            <MultiTechStackDropdown
+              selectedValues={filters.techStacks}
+              onChange={updateFilter}
+            />
+
+            <SingleFilterDropdown
+              name="salaryRange"
+              value={filters.salaryRange}
+              options={FILTER_GROUPS.salaryRange}
+              onChange={updateFilter}
+            />
+
+            <button
+              type="button"
+              onClick={handleClear}
+              className="ml-auto rounded-lg px-4 py-2.5 text-[15px] font-normal text-[#F7631E] transition hover:bg-orange-50"
+            >
+              Clear
             </button>
+
+            {locationError ? (
+              <p className="basis-full text-xs font-normal text-orange-500">
+                {locationError}
+              </p>
+            ) : null}
           </div>
-        </div>
+        </form>
       </div>
     </section>
   );

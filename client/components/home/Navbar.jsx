@@ -87,37 +87,37 @@ export default function Navbar() {
     currentUser?.role === "recruiter" || currentUser?.role === "both";
 
   return (
-    <header className="fixed left-0 top-0 z-50 w-full border-b border-slate-100 bg-white/95 backdrop-blur-xl">
-      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
+    <header className="w-full border-b border-slate-200 bg-white font-sans">
+      <nav className="mx-auto flex h-[88px] max-w-36.2517.5pxxl items-center justify-between px-6 lg:px-8">
         <Link
           href="/"
-          className="flex items-center gap-3 text-[22px] font-extrabold text-blue-700"
+          className="flex items-center gap-3 text-[25px] font-semibold tracking-tight text-[#0C203A]"
         >
-          <span className="grid h-8 w-8 place-items-center rounded-xl bg-blue-700 text-white shadow-md shadow-blue-700/20">
-            <BsBriefcaseFill size={14} />
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#F7631E] text-white shadow-sm">
+            <BsBriefcaseFill size={16} />
           </span>
           JobsEra
         </Link>
 
-        <div className="hidden items-center gap-4 md:flex">
+        <div className="hidden items-center gap-7 md:flex">
           <button
             type="button"
             onClick={handlePostJobClick}
-            className="text-sm font-semibold text-slate-700 hover:text-blue-700"
+            className="text-[17px] font-normal text-[#0C203A] transition hover:text-[#F7631E]"
           >
             {currentUser && !canRecruit ? "Become a recruiter" : "+ Post a job"}
           </button>
 
           {currentUser ? (
             <>
-              <div className="rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700">
+              <div className="rounded-full border border-slate-200 bg-[#F9FBFB] px-5 py-2.5 text-sm font-medium text-[#0C203A]">
                 Hi, {firstName || "User"}
               </div>
 
               <button
                 type="button"
                 onClick={handleLogout}
-                className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800"
+                className="rounded-xl bg-[#F7631E] px-6 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-[#e85512]"
               >
                 Logout
               </button>
@@ -126,14 +126,14 @@ export default function Navbar() {
             <>
               <Link
                 href="/register"
-                className="text-sm font-semibold text-slate-700 hover:text-blue-700"
+                className="text-[17px] font-normal text-[#0C203A] transition hover:text-[#F7631E]"
               >
                 Register
               </Link>
 
               <Link
                 href="/login"
-                className="rounded-full bg-blue-700 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-700/20 transition hover:bg-blue-800"
+                className="rounded-xl bg-[#F7631E] px-7 py-3 text-[16px] font-medium text-white shadow-sm transition hover:bg-[#e85512]"
               >
                 Login
               </Link>
@@ -141,34 +141,35 @@ export default function Navbar() {
           )}
 
           <button
+            type="button"
             aria-label="Notifications"
-            className="grid h-10 w-10 place-items-center rounded-full text-slate-700 hover:bg-slate-100"
+            className="grid h-11 w-11 place-items-center rounded-full text-[#0C203A] transition hover:bg-slate-100"
           >
-            <IoNotificationsOutline size={20} />
+            <IoNotificationsOutline size={22} />
           </button>
         </div>
 
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="grid h-10 w-10 place-items-center rounded-full text-slate-800 hover:bg-slate-100 md:hidden"
+          className="grid h-11 w-11 place-items-center rounded-full text-[#0C203A] transition hover:bg-slate-100 md:hidden"
           aria-label="Open menu"
         >
-          <HiOutlineMenuAlt3 size={24} />
+          <HiOutlineMenuAlt3 size={25} />
         </button>
       </nav>
 
       {open ? (
         <div className="fixed inset-0 z-50 bg-slate-950/40 md:hidden">
-          <div className="ml-auto h-screen w-[82%] bg-white p-6 shadow-2xl">
+          <div className="ml-auto h-screen w-[84%] bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between">
               <Link
                 href="/"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-3 text-xl font-extrabold text-blue-700"
+                className="flex items-center gap-3 text-xl font-semibold text-[#0C203A]"
               >
-                <span className="grid h-8 w-8 place-items-center rounded-xl bg-blue-700 text-white">
-                  <BsBriefcaseFill size={14} />
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#F7631E] text-white">
+                  <BsBriefcaseFill size={15} />
                 </span>
                 JobsEra
               </Link>
@@ -186,18 +187,18 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={handlePostJobClick}
-                className="block text-lg font-semibold text-slate-800"
+                className="block text-lg font-medium text-[#0C203A]"
               >
                 {currentUser && !canRecruit ? "Become a recruiter" : "+ Post a job"}
               </button>
 
               {currentUser ? (
                 <>
-                  <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
-                    <p className="text-xs font-semibold text-slate-500">
+                  <div className="rounded-2xl border border-slate-200 bg-[#F9FBFB] px-4 py-3">
+                    <p className="text-xs font-normal text-slate-500">
                       Signed in as
                     </p>
-                    <p className="text-base font-extrabold text-blue-700">
+                    <p className="text-base font-medium text-[#0C203A]">
                       {currentUser.name || "User"}
                     </p>
                   </div>
@@ -205,7 +206,7 @@ export default function Navbar() {
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="inline-flex rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white"
+                    className="inline-flex rounded-xl bg-[#F7631E] px-6 py-3 text-sm font-medium text-white"
                   >
                     Logout
                   </button>
@@ -215,7 +216,7 @@ export default function Navbar() {
                   <Link
                     href="/register"
                     onClick={() => setOpen(false)}
-                    className="block text-lg font-semibold text-slate-800"
+                    className="block text-lg font-medium text-[#0C203A]"
                   >
                     Register
                   </Link>
@@ -223,7 +224,7 @@ export default function Navbar() {
                   <Link
                     href="/login"
                     onClick={() => setOpen(false)}
-                    className="inline-flex rounded-xl bg-blue-700 px-6 py-3 text-sm font-bold text-white"
+                    className="inline-flex rounded-xl bg-[#F7631E] px-6 py-3 text-sm font-medium text-white"
                   >
                     Login
                   </Link>

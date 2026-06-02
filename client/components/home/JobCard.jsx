@@ -1,24 +1,12 @@
 import Link from "next/link";
 import {
-  FiMapPin,
-  FiShare2,
+  FiArrowRight,
   FiBriefcase,
   FiDollarSign,
-  FiClock,
-  FiArrowRight,
-  FiLock,
+  FiMapPin,
+  FiShare2,
 } from "react-icons/fi";
 import { MdVerified } from "react-icons/md";
-import { LuSparkles } from "react-icons/lu";
-
-function JobMetaItem({ icon, children }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500">
-      {icon}
-      {children}
-    </span>
-  );
-}
 
 function getCompanyInitials(companyName = "JE") {
   return companyName
@@ -27,20 +15,6 @@ function getCompanyInitials(companyName = "JE") {
     .slice(0, 2)
     .map((word) => word[0]?.toUpperCase())
     .join("");
-}
-
-function formatSalary(job) {
-  if (!job.salary_min && !job.salary_max) return null;
-
-  if (job.salary_min && job.salary_max) {
-    return `LKR ${job.salary_min.toLocaleString()} - ${job.salary_max.toLocaleString()}`;
-  }
-
-  if (job.salary_min) {
-    return `From LKR ${job.salary_min.toLocaleString()}`;
-  }
-
-  return `Up to LKR ${job.salary_max.toLocaleString()}`;
 }
 
 function getSkillTags(requiredSkills) {
@@ -53,153 +27,116 @@ function getSkillTags(requiredSkills) {
     .slice(0, 4);
 }
 
-export default function JobCard({ job, isLoggedIn = false }) {
+function formatSalary(job) {
+  if (!job.salary_min && !job.salary_max) return null;
+
+  if (job.salary_min && job.salary_max) {
+    return `LKR ${Number(job.salary_min).toLocaleString()} - ${Number(
+      job.salary_max
+    ).toLocaleString()}/month`;
+  }
+
+  if (job.salary_min) {
+    return `From LKR ${Number(job.salary_min).toLocaleString()}/month`;
+  }
+
+  return `Up to LKR ${Number(job.salary_max).toLocaleString()}/month`;
+}
+
+function formatJobType(jobType) {
+  if (!jobType) return "Job type not added";
+
+  return jobType
+    .split("-")
+    .map((word) => word[0]?.toUpperCase() + word.slice(1))
+    .join("-");
+}
+
+function JobMetaItem({ icon, children }) {
+  return (
+    <span className="inline-flex items-center gap-2 text-[16px] font-normal text-slate-500">
+      {icon}
+      {children}
+    </span>
+  );
+}
+
+export default function JobCard({ job }) {
   const jobDetailsPath = `/jobs/${job.id}`;
 
-  const companyName = job.company_name || job.company || "JobsEra Company";
-  const logoText = job.logoText || getCompanyInitials(companyName);
-  const title = job.title || "Untitled role";
-  const location = job.location || "Location not added";
-  const jobType = job.job_type || job.type || "Role";
-  const workMode = job.work_mode || job.mode || "Work mode not added";
-  const salary = job.salary || formatSalary(job);
-  const tags = job.tags || getSkillTags(job.required_skills);
-  const category = job.category || "Technology";
-  const match = job.match || "82%";
-  const aiStatus =
-    job.aiStatus ||
-    job.statusText ||
-    "Strong match based on your profile and skills.";
+  const companyName = job.company_name || "JobsEra Company";
+  const logoText = getCompanyInitials(companyName);
+  const salary = formatSalary(job);
+  const skills = getSkillTags(job.required_skills);
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-100 hover:shadow-lg hover:shadow-blue-950/5 md:p-6">
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex flex-1 gap-4">
+    <article className="rounded-2xl border border-slate-200 bg-white p-7 font-sans shadow-sm transition hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/70">
+      <div className="grid gap-7 lg:grid-cols-[1fr_auto]">
+        <div className="flex gap-5">
           <Link
             href={jobDetailsPath}
-            className="grid h-14 w-14 shrink-0 place-items-center rounded-xl border border-slate-100 bg-slate-50 text-sm font-extrabold text-blue-700 shadow-sm transition hover:border-blue-300"
+            className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-[#F9FBFB] text-lg font-medium text-[#0C203A] ring-1 ring-slate-200 transition hover:bg-slate-100"
           >
             {logoText}
           </Link>
 
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <Link
-                href={jobDetailsPath}
-                className="text-lg font-extrabold leading-snug text-slate-950 transition hover:text-blue-700 md:text-xl"
-              >
-                {title}
-              </Link>
+          <div className="min-w-0">
+            <Link
+              href={jobDetailsPath}
+              className="text-[23px] font-medium leading-tight tracking-tight text-[#0C203A] transition hover:text-[#F7631E]"
+            >
+              {job.title || "Untitled role"}
+            </Link>
 
-              {isLoggedIn ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-extrabold text-blue-700">
-                  <LuSparkles size={12} />
-                  AI Pick
-                </span>
-              ) : null}
-            </div>
-
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              <p className="text-sm font-extrabold text-emerald-700">
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <p className="text-[17px] font-normal text-[#2b7a66]">
                 {companyName}
               </p>
-
-              <MdVerified className="text-emerald-600" size={16} />
+              <MdVerified size={18} className="text-[#2b7a66]" />
             </div>
 
-            <p className="mt-4 text-sm font-semibold text-slate-800">
-              {category}
+            <p className="mt-5 text-[16px] font-normal text-[#0C203A]">
+              {skills.length ? skills.join(" · ") : "Role details available"}
             </p>
 
-            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
-              <JobMetaItem icon={<FiBriefcase size={15} />}>
-                {jobType}
+            <div className="mt-5 flex flex-wrap gap-x-7 gap-y-3">
+              <JobMetaItem icon={<FiBriefcase size={18} />}>
+                {formatJobType(job.job_type)}
               </JobMetaItem>
 
-              <JobMetaItem icon={<FiMapPin size={15} />}>
-                {location}
+              <JobMetaItem icon={<FiMapPin size={18} />}>
+                {job.location || "Location not added"}
               </JobMetaItem>
 
               {salary ? (
-                <JobMetaItem icon={<FiDollarSign size={15} />}>
+                <JobMetaItem icon={<FiDollarSign size={18} />}>
                   {salary}
                 </JobMetaItem>
               ) : null}
-
-              <JobMetaItem icon={<FiClock size={15} />}>
-                {workMode}
-              </JobMetaItem>
             </div>
-
-            {tags.length ? (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            ) : null}
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-5 lg:min-w-60 lg:items-end">
-          <div className="flex items-center gap-4">
-            <button className="inline-flex items-center gap-1.5 text-sm font-extrabold text-slate-800 transition hover:text-blue-700">
-              <FiShare2 size={15} />
+        <div className="flex flex-col items-start justify-between gap-8 lg:items-end">
+          <div className="flex items-center gap-6">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 text-[16px] font-medium text-[#0C203A] transition hover:text-[#F7631E]"
+            >
+              <FiShare2 size={18} />
               Share
             </button>
 
             <Link
               href={jobDetailsPath}
-              className="inline-flex items-center gap-1.5 text-sm font-extrabold text-orange-500 transition hover:text-orange-600"
+              className="inline-flex items-center gap-2 text-[16px] font-medium text-[#F7631E] transition hover:text-[#e85512]"
             >
-              View details
-              <FiArrowRight size={15} />
+              Apply
+              <FiArrowRight size={18} />
             </Link>
           </div>
 
-          {isLoggedIn ? (
-            <div className="w-full rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 lg:w-52">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-extrabold uppercase tracking-wide text-blue-500">
-                  AI Match
-                </span>
-                <span className="text-lg font-black text-blue-700">
-                  {match}
-                </span>
-              </div>
-
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
-                <div
-                  className="h-full rounded-full bg-blue-700"
-                  style={{ width: match }}
-                />
-              </div>
-
-              <p className="mt-2 text-xs font-bold text-slate-600">
-                {aiStatus}
-              </p>
-            </div>
-          ) : (
-            <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 lg:w-52">
-              <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-slate-500">
-                <FiLock size={13} />
-                AI Match Locked
-              </div>
-
-              <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
-                Login and upload your CV to unlock personalized match scores.
-              </p>
-            </div>
-          )}
-
-          <p className="text-sm font-semibold text-slate-400">
-            Status: {job.status || "active"}
-          </p>
+          <p className="text-sm font-normal text-slate-400">Open now</p>
         </div>
       </div>
     </article>

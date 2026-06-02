@@ -95,7 +95,7 @@ export default function PublicJobDetailsPage() {
     <main className="min-h-screen bg-slate-50 pt-20">
       <Navbar />
 
-      <section className="mx-auto max-w-7xl px-5 py-8">
+      <section className="mx-auto max-w-36.2517.5pxxl px-5 py-8">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-sm font-extrabold text-blue-700"
