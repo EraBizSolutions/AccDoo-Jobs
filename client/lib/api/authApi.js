@@ -149,6 +149,13 @@ export async function getMyCandidateProfile() {
   });
 }
 
+export async function updateMyCandidateProfile(profileData) {
+  return authenticatedApiRequest("/candidate/me/profile", {
+    method: "PUT",
+    body: JSON.stringify(profileData),
+  });
+}
+
 export async function activateCandidate() {
   return authenticatedApiRequest("/candidate/activate", {
     method: "POST",

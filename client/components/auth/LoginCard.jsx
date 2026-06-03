@@ -220,7 +220,7 @@ export default function LoginCard() {
           </h1>
 
           <p className="mt-2 text-[13px] font-normal leading-5 text-[#585958]">
-            Choose your JobsEra space before signing in.
+            Choose your AccDoo space before signing in.
           </p>
 
           <div className="mt-5 grid grid-cols-2 gap-3">
@@ -350,7 +350,7 @@ export default function LoginCard() {
           </p>
 
           <p className="mt-3 text-[12px] font-normal text-[#585958]">
-            New to JobsEra?{" "}
+            New to AccDoo?{" "}
             <Link href="/register" className="font-medium text-[#F7631E]">
               Create account
             </Link>

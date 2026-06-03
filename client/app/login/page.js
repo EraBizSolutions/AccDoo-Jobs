@@ -2,7 +2,7 @@ import Navbar from "@/components/home/Navbar";
 import LoginCard from "@/components/auth/LoginCard";
 
 export const metadata = {
-  title: "Login | JobsEra",
+  title: "Login | AccDoo",
 };
 
 export default function LoginPage() {

@@ -208,11 +208,11 @@ export default function JobsList() {
       setVisibleCount(DEFAULT_VISIBLE_COUNT);
     }
 
-    window.addEventListener("jobsera:jobFiltersChanged", handleFiltersChanged);
+    window.addEventListener("AccDoo:jobFiltersChanged", handleFiltersChanged);
 
     return () => {
       window.removeEventListener(
-        "jobsera:jobFiltersChanged",
+        "AccDoo:jobFiltersChanged",
         handleFiltersChanged
       );
     };

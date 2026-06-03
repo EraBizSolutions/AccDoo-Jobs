@@ -68,7 +68,7 @@ function buildDescriptionSections(description) {
         title: "About the role",
         items: [
           "This role is open for candidates who are ready to work with a growing team.",
-          "The recruiter has shared the key job details through JobsEra.",
+          "The recruiter has shared the key job details through AccDoo.",
           "Apply after reviewing the role, location, and required skills.",
         ],
       },
@@ -174,7 +174,7 @@ export default function PublicJobDetailsPage() {
     router.push("/candidate/upload-cv");
   }
 
-  const companyName = job?.company_name || "JobsEra Company";
+  const companyName = job?.company_name || "AccDoo Company";
   const companyInitials = getCompanyInitials(companyName);
   const skills = getSkillTags(job?.required_skills);
   const sections = buildDescriptionSections(job?.description);
@@ -365,13 +365,13 @@ export default function PublicJobDetailsPage() {
                         {companyName}
                       </p>
                       <p className="text-sm font-normal text-[#585958]">
-                        Hiring through JobsEra
+                        Hiring through AccDoo
                       </p>
                     </div>
                   </div>
 
                   <p className="mt-4 text-sm font-normal leading-6 text-[#585958]">
-                    This recruiter is managing active openings through JobsEra.
+                    This recruiter is managing active openings through AccDoo.
                     Candidate matching becomes smarter after CV upload.
                   </p>
                 </div>
@@ -388,7 +388,7 @@ export default function PublicJobDetailsPage() {
 
                   <p className="mt-4 inline-flex items-center gap-2 text-sm font-normal text-[#F7631E]">
                     <FiPhone />
-                    JobsEra candidate support
+                    AccDoo candidate support
                   </p>
                 </div>
               </aside>

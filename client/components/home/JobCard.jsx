@@ -64,7 +64,7 @@ function JobMetaItem({ icon, children }) {
 export default function JobCard({ job }) {
   const jobDetailsPath = `/jobs/${job.id}`;
 
-  const companyName = job.company_name || "JobsEra Company";
+  const companyName = job.company_name || "AccDoo Company";
   const logoText = getCompanyInitials(companyName);
   const salary = formatSalary(job);
   const skills = getSkillTags(job.required_skills);

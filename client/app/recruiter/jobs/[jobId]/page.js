@@ -119,7 +119,7 @@ export default function PublicJobDetailsPage() {
                 <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-blue-600">
-                      JobsEra verified role
+                      AccDoo verified role
                     </p>
 
                     <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 md:text-4xl">
@@ -172,7 +172,7 @@ export default function PublicJobDetailsPage() {
                         Strong Candidate Alignment
                       </p>
                       <p className="mt-2 text-sm font-medium leading-6 text-slate-600">
-                        JobsEra can calculate stronger AI matching after the candidate
+                        AccDoo can calculate stronger AI matching after the candidate
                         uploads a CV. This preview is based on job skills and role data.
                       </p>
 

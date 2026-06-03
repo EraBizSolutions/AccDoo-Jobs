@@ -30,7 +30,7 @@ export default function AnalyzingCard() {
 
   useEffect(() => {
     const redirectTimer = setTimeout(() => {
-      router.push("/");
+      router.push("/candidate/profile");
     }, 3500);
 
     return () => clearTimeout(redirectTimer);
@@ -38,7 +38,7 @@ export default function AnalyzingCard() {
 
   return (
     <section className="flex min-h-screen items-center justify-center bg-[#F9FBFB] px-5 py-12 font-sans">
-      <div className="w-full max-w-[470px] text-center">
+      <div className="w-full max-w-117.5 text-center">
         <p className="text-sm font-normal uppercase tracking-[0.22em] text-[#F7631E]">
           AI extraction process
         </p>
@@ -47,8 +47,8 @@ export default function AnalyzingCard() {
           Let’s build your profile
         </h1>
 
-        <p className="mx-auto mt-3 max-w-[360px] text-sm font-normal leading-6 text-[#585958]">
-          JobsEra is extracting your experience, skills, education, and matching
+        <p className="mx-auto mt-3 max-w-90 text-sm font-normal leading-6 text-[#585958]">
+          AccDoo is extracting your experience, skills, education, and matching
           signals.
         </p>
 
@@ -68,16 +68,16 @@ export default function AnalyzingCard() {
               Extracting intelligence from your uploaded document
             </p>
 
-            <div className="mx-auto mt-5 h-2 max-w-[240px] overflow-hidden rounded-full bg-slate-200">
+            <div className="mx-auto mt-5 h-2 max-w-60 overflow-hidden rounded-full bg-slate-200">
               <div className="h-full w-[68%] animate-pulse rounded-full bg-[#F7631E]" />
             </div>
 
             <p className="mt-4 text-[11px] font-normal text-[#F7631E]">
-              Redirecting to your job discovery workspace...
+              Redirecting to complete your profile...
             </p>
           </div>
 
-          <div className="my-5 h-22x bg-slate-200" />
+          <div className="my-5 h-px bg-slate-200" />
 
           <p className="text-[10px] font-normal uppercase tracking-[0.18em] text-slate-400">
             Matching signals

@@ -3,7 +3,7 @@ import { BsBriefcaseFill } from "react-icons/bs";
 
 const footerGroups = [
   {
-    title: "JobsEra",
+    title: "AccDoo",
     links: ["Jobs", "For Businesses", "Company", "Resources"],
   },
   {
@@ -36,7 +36,7 @@ export default function Footer() {
             <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-[#F7631E]">
               <BsBriefcaseFill size={18} />
             </span>
-            JobsEra
+            AccDoo
           </Link>
 
           <p className="text-base font-normal text-white/70">
@@ -54,7 +54,7 @@ export default function Footer() {
                   <li key={item}>
                     <span
                       className={`text-base font-normal ${
-                        index === 0 && group.title === "JobsEra"
+                        index === 0 && group.title === "AccDoo"
                           ? "text-[#F7631E]"
                           : "text-white/60"
                       }`}
@@ -69,7 +69,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-white/10 py-7 text-center text-sm font-normal text-white/55">
-          © 2026 JobsEra. Built by{" "}
+          © 2026 AccDoo. Built by{" "}
           <a
             href="https://erabiz.io"
             target="_blank"

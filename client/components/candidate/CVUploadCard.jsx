@@ -14,7 +14,7 @@ export default function CVUploadCard() {
         </h1>
 
         <p className="mx-auto mt-4 max-w-[420px] text-[15px] font-normal leading-7 text-[#585958]">
-          JobsEra reads your skills, experience, and education to prepare better
+          AccDoo reads your skills, experience, and education to prepare better
           job recommendations.
         </p>
 

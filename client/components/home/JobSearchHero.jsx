@@ -56,7 +56,7 @@ const TECH_STACKS = [
 
 function publishJobFilters(filters) {
   window.dispatchEvent(
-    new CustomEvent("jobsera:jobFiltersChanged", {
+    new CustomEvent("AccDoo:jobFiltersChanged", {
       detail: filters,
     })
   );

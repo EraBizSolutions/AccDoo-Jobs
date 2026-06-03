@@ -7,7 +7,7 @@ const poppins = Poppins({
 });
 
 export const metadata = {
-  title: "JobsEra | AI Job Platform",
+  title: "AccDoo | AI Job Platform",
   description: "AI-powered job discovery and hiring platform.",
 };
 

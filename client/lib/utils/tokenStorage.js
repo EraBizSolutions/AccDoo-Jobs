@@ -2,6 +2,7 @@ const ACCESS_TOKEN_KEY = "jobsera_access_token";
 const REFRESH_TOKEN_KEY = "jobsera_refresh_token";
 const USER_KEY = "jobsera_user";
 const LOGIN_MODE_KEY = "jobsera_login_mode";
+const CANDIDATE_PROFILE_PHOTO_KEY = "jobsera_candidate_profile_photo";
 
 const VALID_LOGIN_MODES = ["candidate", "recruiter"];
 
@@ -23,6 +24,25 @@ export function saveAuthData({ accessToken, refreshToken, user }) {
   if (user) {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
   }
+}
+
+export function updateStoredUser(userUpdates) {
+  if (!isBrowser()) return null;
+
+  const currentUser = getStoredUser();
+
+  if (!currentUser) return null;
+
+  const updatedUser = {
+    ...currentUser,
+    ...userUpdates,
+  };
+
+  localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+
+  window.dispatchEvent(new Event("jobsera:auth-updated"));
+
+  return updatedUser;
 }
 
 export function getAccessToken() {
@@ -73,10 +93,31 @@ export function getSelectedLoginMode() {
   return savedMode;
 }
 
+export function saveCandidateProfilePhoto(photoDataUrl) {
+  if (!isBrowser()) return;
+
+  if (photoDataUrl) {
+    localStorage.setItem(CANDIDATE_PROFILE_PHOTO_KEY, photoDataUrl);
+  } else {
+    localStorage.removeItem(CANDIDATE_PROFILE_PHOTO_KEY);
+  }
+
+  window.dispatchEvent(new Event("jobsera:auth-updated"));
+}
+
+export function getCandidateProfilePhoto() {
+  if (!isBrowser()) return null;
+  return localStorage.getItem(CANDIDATE_PROFILE_PHOTO_KEY);
+}
+
 export function clearAuthData() {
   if (!isBrowser()) return;
 
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(CANDIDATE_PROFILE_PHOTO_KEY);
+  localStorage.removeItem(LOGIN_MODE_KEY);
+
+  window.dispatchEvent(new Event("jobsera:auth-updated"));
 }

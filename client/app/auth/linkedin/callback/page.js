@@ -97,7 +97,7 @@ export default function LinkedInCallbackPage() {
 
         {!errorMessage ? (
           <p className="mt-4 text-xs font-normal text-slate-400">
-            Please wait while JobsEra verifies your LinkedIn account.
+            Please wait while AccDoo verifies your LinkedIn account.
           </p>
         ) : null}
       </div>

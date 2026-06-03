@@ -1,31 +1,64 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BsBriefcaseFill } from "react-icons/bs";
-import { IoNotificationsOutline, IoClose } from "react-icons/io5";
+import { IoClose, IoNotificationsOutline } from "react-icons/io5";
 import { HiOutlineMenuAlt3 } from "react-icons/hi";
+import { FiLogOut, FiUser } from "react-icons/fi";
 
 import { getCurrentUser } from "@/lib/api/authApi";
 import {
   clearAuthData,
+  getCandidateProfilePhoto,
   getStoredUser,
   saveAuthData,
   setSelectedLoginMode,
 } from "@/lib/utils/tokenStorage";
 
+function ProfileAvatar({ user, photo }) {
+  const firstLetter =
+    user?.name?.trim()?.charAt(0)?.toUpperCase() ||
+    user?.email?.trim()?.charAt(0)?.toUpperCase() ||
+    "U";
+
+  if (photo) {
+    return (
+      <img
+        src={photo}
+        alt="Profile"
+        className="h-full w-full rounded-full object-cover"
+      />
+    );
+  }
+
+  return (
+    <span className="grid h-full w-full place-items-center rounded-full bg-[#F7631E] text-sm font-medium text-white">
+      {firstLetter}
+    </span>
+  );
+}
+
 export default function Navbar() {
   const router = useRouter();
+  const profileMenuRef = useRef(null);
 
   const [open, setOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [profilePhoto, setProfilePhoto] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
 
     async function syncCurrentUser() {
       const storedUser = getStoredUser();
+      const storedPhoto = getCandidateProfilePhoto();
+
+      if (storedPhoto && isMounted) {
+        setProfilePhoto(storedPhoto);
+      }
 
       if (storedUser && isMounted) {
         setCurrentUser(storedUser);
@@ -50,15 +83,39 @@ export default function Navbar() {
 
     syncCurrentUser();
 
+    function handleAuthUpdate() {
+      setCurrentUser(getStoredUser());
+      setProfilePhoto(getCandidateProfilePhoto());
+    }
+
+    window.addEventListener("jobsera:auth-updated", handleAuthUpdate);
+
     return () => {
       isMounted = false;
+      window.removeEventListener("jobsera:auth-updated", handleAuthUpdate);
+    };
+  }, []);
+
+  useEffect(() => {
+    function handleOutsideClick(event) {
+      if (!profileMenuRef.current?.contains(event.target)) {
+        setProfileOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
     };
   }, []);
 
   function handleLogout() {
     clearAuthData();
     setCurrentUser(null);
+    setProfilePhoto(null);
     setOpen(false);
+    setProfileOpen(false);
     router.push("/login");
   }
 
@@ -82,13 +139,18 @@ export default function Navbar() {
     router.push("/recruiter/profile");
   }
 
-  const firstName = currentUser?.name?.split(" ")[0];
+  function handleProfileClick() {
+    setOpen(false);
+    setProfileOpen(false);
+    router.push("/candidate/profile");
+  }
+
   const canRecruit =
     currentUser?.role === "recruiter" || currentUser?.role === "both";
 
   return (
     <header className="w-full border-b border-slate-200 bg-white font-sans">
-      <nav className="mx-auto flex h-[88px] max-w-36.2517.5pxxl items-center justify-between px-6 lg:px-8">
+      <nav className="mx-auto flex h-22 max-w-7xl items-center justify-between px-6 lg:px-8">
         <Link
           href="/"
           className="flex items-center gap-3 text-[25px] font-semibold tracking-tight text-[#0C203A]"
@@ -96,7 +158,7 @@ export default function Navbar() {
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#F7631E] text-white shadow-sm">
             <BsBriefcaseFill size={16} />
           </span>
-          JobsEra
+          AccDoo
         </Link>
 
         <div className="hidden items-center gap-7 md:flex">
@@ -109,19 +171,55 @@ export default function Navbar() {
           </button>
 
           {currentUser ? (
-            <>
-              <div className="rounded-full border border-slate-200 bg-[#F9FBFB] px-5 py-2.5 text-sm font-medium text-[#0C203A]">
-                Hi, {firstName || "User"}
-              </div>
-
+            <div ref={profileMenuRef} className="relative">
               <button
                 type="button"
-                onClick={handleLogout}
-                className="rounded-xl bg-[#F7631E] px-6 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-[#e85512]"
+                onClick={() => setProfileOpen((current) => !current)}
+                className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white p-1 shadow-sm transition hover:border-[#F7631E]"
+                aria-label="Open profile menu"
               >
-                Logout
+                <ProfileAvatar user={currentUser} photo={profilePhoto} />
               </button>
-            </>
+
+              {profileOpen ? (
+                <div className="absolute right-0 top-[calc(100%+12px)] z-50 w-72 overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-900/10">
+                  <div className="flex items-center gap-3 rounded-2xl bg-[#F9FBFB] p-3">
+                    <div className="h-12 w-12 shrink-0 rounded-full">
+                      <ProfileAvatar user={currentUser} photo={profilePhoto} />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-[#202020]">
+                        {currentUser.name || "User"}
+                      </p>
+                      <p className="truncate text-xs font-normal text-[#585958]">
+                        {currentUser.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 space-y-1">
+                    <button
+                      type="button"
+                      onClick={handleProfileClick}
+                      className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-normal text-[#202020] transition hover:bg-orange-50 hover:text-[#F7631E]"
+                    >
+                      <FiUser size={17} />
+                      Profile
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-normal text-red-600 transition hover:bg-red-50"
+                    >
+                      <FiLogOut size={17} />
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           ) : (
             <>
               <Link
@@ -171,7 +269,7 @@ export default function Navbar() {
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#F7631E] text-white">
                   <BsBriefcaseFill size={15} />
                 </span>
-                JobsEra
+                AccDoo
               </Link>
 
               <button
@@ -194,14 +292,24 @@ export default function Navbar() {
 
               {currentUser ? (
                 <>
-                  <div className="rounded-2xl border border-slate-200 bg-[#F9FBFB] px-4 py-3">
-                    <p className="text-xs font-normal text-slate-500">
-                      Signed in as
-                    </p>
-                    <p className="text-base font-medium text-[#0C203A]">
-                      {currentUser.name || "User"}
-                    </p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleProfileClick}
+                    className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-[#F9FBFB] px-4 py-3 text-left"
+                  >
+                    <div className="h-11 w-11 rounded-full">
+                      <ProfileAvatar user={currentUser} photo={profilePhoto} />
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium text-[#0C203A]">
+                        {currentUser.name || "User"}
+                      </p>
+                      <p className="text-xs font-normal text-slate-500">
+                        View profile
+                      </p>
+                    </div>
+                  </button>
 
                   <button
                     type="button"

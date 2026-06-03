@@ -249,7 +249,7 @@ export default function AuthCard() {
           </div>
 
           <h1 className="mt-4 text-[28px] font-medium tracking-tight text-[#202020]">
-            Join JobsEra
+            Join AccDoo
           </h1>
 
           <p className="mt-2 text-[13px] font-normal leading-5 text-[#585958]">
