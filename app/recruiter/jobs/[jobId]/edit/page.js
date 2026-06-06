@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { FiArrowLeft } from "react-icons/fi";
+import { FiArrowLeft, FiEdit3 } from "react-icons/fi";
 
-import Navbar from "@/components/home/Navbar";
 import RecruiterJobForm from "@/components/recruiter/RecruiterJobForm";
+import RecruiterShell from "@/components/recruiter/RecruiterShell";
 import { getRecruiterJob, updateRecruiterJob } from "@/lib/api/recruiterApi";
 
 const emptyFormData = {
@@ -42,6 +42,8 @@ export default function EditRecruiterJobPage() {
 
   useEffect(() => {
     async function loadJob() {
+      setPageError("");
+
       try {
         const job = await getRecruiterJob(jobId);
 
@@ -72,31 +74,42 @@ export default function EditRecruiterJobPage() {
 
   async function handleUpdateJob(jobPayload) {
     await updateRecruiterJob(jobId, jobPayload);
-    router.push("/recruiter/jobs");
+    router.push(`/recruiter/jobs/${jobId}`);
   }
 
   return (
-    <main className="min-h-screen bg-[#F9FBFB] font-sans">
-      <Navbar />
-
-      <section className="mx-auto max-w-5xl px-5 py-10">
+    <RecruiterShell>
+      <section>
         <button
           type="button"
-          onClick={() => router.push("/recruiter/jobs")}
-          className="inline-flex items-center gap-2 text-sm font-normal text-[#F7631E] transition hover:text-[#e85512]"
+          onClick={() => router.push(`/recruiter/jobs/${jobId}`)}
+          className="inline-flex items-center gap-2 text-sm font-medium text-[#2E8D76] transition hover:text-[#236e5c]"
         >
           <FiArrowLeft />
-          Back to manage jobs
+          Back to job workspace
         </button>
 
-        <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-200/70 md:p-8">
-          <p className="text-sm font-normal uppercase tracking-[0.22em] text-[#F7631E]">
-            Edit job
-          </p>
+        <div className="mt-7 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.26em] text-[#F7631E]">
+                Edit job
+              </p>
 
-          <h1 className="mt-2 text-[34px] font-medium tracking-tight text-[#202020]">
-            Update job post
-          </h1>
+              <h1 className="mt-3 text-[34px] font-semibold tracking-tight text-[#0F172A] md:text-[42px]">
+                Update job post
+              </h1>
+
+              <p className="mt-3 max-w-3xl text-sm font-normal leading-6 text-[#667085]">
+                Keep the role details clean, accurate, and ready for candidate
+                applications.
+              </p>
+            </div>
+
+            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-orange-50 text-[#F7631E]">
+              <FiEdit3 size={22} />
+            </div>
+          </div>
 
           {pageError ? (
             <p className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-normal text-red-600">
@@ -109,11 +122,11 @@ export default function EditRecruiterJobPage() {
               initialSkills={skills}
               isLoading={isLoading}
               onSubmit={handleUpdateJob}
-              onCancel={() => router.push("/recruiter/jobs")}
+              onCancel={() => router.push(`/recruiter/jobs/${jobId}`)}
             />
           )}
         </div>
       </section>
-    </main>
+    </RecruiterShell>
   );
 }
