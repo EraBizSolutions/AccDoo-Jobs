@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
+  FiAlertCircle,
   FiArrowLeft,
   FiBriefcase,
-  FiDollarSign,
   FiInfo,
   FiLoader,
   FiMapPin,
@@ -24,8 +24,15 @@ import {
   getPublicJobDetails,
   getPublicJobQuestions,
 } from "@/lib/api/jobsApi";
-import { activateCandidate, getMyCandidateProfile } from "@/lib/api/authApi";
-import { getStoredUser } from "@/lib/utils/tokenStorage";
+import {
+  activateCandidateProfile,
+  getMyCandidateProfile,
+} from "@/lib/api/candidateApi";
+import { getAccessToken, getStoredUser } from "@/lib/utils/tokenStorage";
+import {
+  getCandidateProfileCompletionIssues,
+  isCandidateProfileComplete,
+} from "@/lib/utils/candidateProfileRules";
 
 function getCompanyInitials(companyName = "AD") {
   return companyName
@@ -119,6 +126,17 @@ function DetailMeta({ icon, children }) {
   );
 }
 
+function SalaryMeta({ children }) {
+  return (
+    <span className="inline-flex items-center gap-2 text-sm font-normal text-[#585958]">
+      <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-medium text-[#F7631E]">
+        LKR
+      </span>
+      {children}
+    </span>
+  );
+}
+
 function JobSection({ title, paragraph, items }) {
   return (
     <section className="mt-7">
@@ -147,7 +165,7 @@ function CandidateAlignmentCard({ skills, candidateProfile, isOwnPostedJob }) {
   const candidateMatch = useMemo(() => {
     if (isOwnPostedJob) return 0;
 
-    if (!skills.length) return 72;
+    if (!skills.length) return 55;
 
     const profileSkills = String(candidateProfile?.skills || "")
       .toLowerCase()
@@ -155,40 +173,60 @@ function CandidateAlignmentCard({ skills, candidateProfile, isOwnPostedJob }) {
       .map((skill) => skill.trim())
       .filter(Boolean);
 
-    if (!profileSkills.length) return 78;
+    if (!profileSkills.length) return 50;
 
     const matchedSkills = skills.filter((skill) =>
       profileSkills.includes(skill.toLowerCase())
     );
 
-    return Math.min(95, Math.max(60, 68 + matchedSkills.length * 7));
+    const matchPercent = Math.round((matchedSkills.length / skills.length) * 100);
+
+    return Math.min(95, Math.max(35, matchPercent));
   }, [skills, candidateProfile, isOwnPostedJob]);
+
+  const completionIssues = getCandidateProfileCompletionIssues(candidateProfile);
+  const profileIsComplete =
+    Boolean(candidateProfile) && completionIssues.length === 0;
 
   return (
     <section
       className={`rounded-3xl border p-6 ${
         isOwnPostedJob
           ? "border-slate-200 bg-slate-50"
-          : "border-orange-100 bg-orange-50"
+          : profileIsComplete
+          ? "border-orange-100 bg-orange-50"
+          : "border-yellow-200 bg-yellow-50"
       }`}
     >
       <div className="flex flex-col gap-5 md:flex-row md:items-center">
         <div
           className={`grid h-24 w-24 shrink-0 place-items-center rounded-full border-4 bg-white text-center ${
-            isOwnPostedJob ? "border-slate-300" : "border-[#F7631E]"
+            isOwnPostedJob
+              ? "border-slate-300"
+              : profileIsComplete
+              ? "border-[#F7631E]"
+              : "border-yellow-400"
           }`}
         >
           <div>
             <p
               className={`text-2xl font-medium ${
-                isOwnPostedJob ? "text-slate-500" : "text-[#F7631E]"
+                isOwnPostedJob
+                  ? "text-slate-500"
+                  : profileIsComplete
+                  ? "text-[#F7631E]"
+                  : "text-yellow-700"
               }`}
             >
               {isOwnPostedJob ? "Owner" : `${candidateMatch}%`}
             </p>
             <p
               className={`text-[10px] font-medium uppercase tracking-wide ${
-                isOwnPostedJob ? "text-slate-500" : "text-[#F7631E]"
+                isOwnPostedJob
+                  ? "text-slate-500"
+                  : profileIsComplete
+                  ? "text-[#F7631E]"
+                  : "text-yellow-700"
               }`}
             >
               {isOwnPostedJob ? "posted" : "match"}
@@ -196,23 +234,37 @@ function CandidateAlignmentCard({ skills, candidateProfile, isOwnPostedJob }) {
           </div>
         </div>
 
-        <div>
+        <div className="min-w-0">
           <p className="flex items-center gap-2 text-lg font-medium text-[#202020]">
             {isOwnPostedJob ? (
               <FiInfo className="text-slate-500" />
-            ) : (
+            ) : profileIsComplete ? (
               <LuSparkles className="text-[#F7631E]" />
+            ) : (
+              <FiAlertCircle className="text-yellow-700" />
             )}
             {isOwnPostedJob
               ? "This is your posted job"
-              : "Candidate alignment preview"}
+              : profileIsComplete
+              ? "Candidate alignment preview"
+              : "Complete profile to unlock applying"}
           </p>
 
           <p className="mt-2 text-sm font-normal leading-6 text-[#585958]">
             {isOwnPostedJob
               ? "You are logged in as the recruiter who posted this job. You can preview it, share it, and manage applicants from the recruiter workspace, but you cannot apply to your own job."
-              : "AccDoo can show stronger matching after your profile and CV are updated. This preview uses the job skills and candidate profile data available now."}
+              : profileIsComplete
+              ? "This preview uses your candidate skills against the job requirements. Backend matching will make this score stronger in the next phase."
+              : "You can view this job, but you must complete your candidate profile before applying."}
           </p>
+
+          {!isOwnPostedJob && !profileIsComplete && completionIssues.length ? (
+            <ul className="mt-4 space-y-2 text-xs font-normal text-yellow-800">
+              {completionIssues.slice(0, 5).map((issue) => (
+                <li key={issue}>• {issue}</li>
+              ))}
+            </ul>
+          ) : null}
 
           {skills.length ? (
             <div className="mt-4 flex flex-wrap gap-2">
@@ -269,7 +321,7 @@ function ApplyButton({
       } ${className}`}
     >
       {isPreparingApply ? <FiLoader className="animate-spin" /> : <FiSend />}
-      {isPreparingApply ? "Preparing..." : "Apply now"}
+      {isPreparingApply ? "Checking profile..." : "Apply now"}
     </button>
   );
 }
@@ -289,6 +341,7 @@ export default function PublicJobDetailsView() {
   const [isPreparingApply, setIsPreparingApply] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [applyStatusMessage, setApplyStatusMessage] = useState("");
+  const [applyStatusType, setApplyStatusType] = useState("error");
 
   const companyName = job?.company_name || "AccDoo Company";
   const companyInitials = getCompanyInitials(companyName);
@@ -315,6 +368,15 @@ export default function PublicJobDetailsView() {
 
         setJob(jobData);
         setQuestions(Array.isArray(questionData) ? questionData : []);
+
+        if (getAccessToken()) {
+          try {
+            const profile = await getMyCandidateProfile();
+            setCandidateProfile(profile);
+          } catch {
+            setCandidateProfile(null);
+          }
+        }
       } catch (error) {
         setErrorMessage(error.message || "Could not load job details.");
       } finally {
@@ -333,21 +395,37 @@ export default function PublicJobDetailsView() {
       setCandidateProfile(profile);
       return profile;
     } catch {
-      const activatedProfile = await activateCandidate();
+      const activatedProfile = await activateCandidateProfile();
       setCandidateProfile(activatedProfile);
       return activatedProfile;
     }
   }
 
+  function rememberProfileGateReason(issues) {
+    if (typeof window === "undefined") return;
+
+    sessionStorage.setItem(
+      "accdoo_profile_gate_reason",
+      JSON.stringify({
+        from: "job_apply",
+        jobId,
+        issues,
+        createdAt: Date.now(),
+      })
+    );
+  }
+
   async function handleApplyClick() {
     setApplyStatusMessage("");
+    setApplyStatusType("error");
 
-    if (!currentUser) {
+    if (!getAccessToken() || !currentUser) {
       router.push("/login");
       return;
     }
 
     if (isOwnPostedJob) {
+      setApplyStatusType("neutral");
       setApplyStatusMessage(
         "You cannot apply to this job because it was posted by your recruiter account."
       );
@@ -356,9 +434,36 @@ export default function PublicJobDetailsView() {
 
     try {
       setIsPreparingApply(true);
-      await prepareCandidateProfile();
+
+      const profile = await prepareCandidateProfile();
+
+      if (!profile?.cv_url) {
+        const issues = ["CV is missing."];
+        rememberProfileGateReason(issues);
+
+        setApplyStatusType("warning");
+        setApplyStatusMessage("Please upload your CV before applying.");
+        router.push("/candidate/upload-cv");
+        return;
+      }
+
+      const issues = getCandidateProfileCompletionIssues(profile);
+
+      if (!isCandidateProfileComplete(profile)) {
+        rememberProfileGateReason(issues);
+
+        setApplyStatusType("warning");
+        setApplyStatusMessage(
+          `Please complete your candidate profile first: ${issues.join(" ")}`
+        );
+
+        router.push("/candidate/profile");
+        return;
+      }
+
       setIsApplyModalOpen(true);
     } catch (error) {
+      setApplyStatusType("error");
       setApplyStatusMessage(
         error.message ||
           "Could not prepare your candidate profile. Please try again."
@@ -366,6 +471,18 @@ export default function PublicJobDetailsView() {
     } finally {
       setIsPreparingApply(false);
     }
+  }
+
+  function getApplyStatusClass() {
+    if (applyStatusType === "neutral") {
+      return "border-slate-200 bg-slate-50 text-slate-600";
+    }
+
+    if (applyStatusType === "warning") {
+      return "border-yellow-200 bg-yellow-50 text-yellow-800";
+    }
+
+    return "border-red-200 bg-red-50 text-red-600";
   }
 
   return (
@@ -440,9 +557,7 @@ export default function PublicJobDetailsView() {
                         {job.location || "Location not added"}
                       </DetailMeta>
 
-                      <DetailMeta icon={<FiDollarSign size={16} />}>
-                        {formatSalary(job)}
-                      </DetailMeta>
+                      <SalaryMeta>{formatSalary(job)}</SalaryMeta>
                     </div>
                   </div>
                 </div>
@@ -467,11 +582,7 @@ export default function PublicJobDetailsView() {
 
               {applyStatusMessage ? (
                 <p
-                  className={`mt-6 rounded-xl border px-4 py-3 text-sm font-normal ${
-                    isOwnPostedJob
-                      ? "border-slate-200 bg-slate-50 text-slate-600"
-                      : "border-red-200 bg-red-50 text-red-600"
-                  }`}
+                  className={`mt-6 rounded-xl border px-4 py-3 text-sm font-normal ${getApplyStatusClass()}`}
                 >
                   {applyStatusMessage}
                 </p>
@@ -532,7 +643,7 @@ export default function PublicJobDetailsView() {
                   <p className="mt-2 text-sm font-normal text-[#585958]">
                     {isOwnPostedJob
                       ? "This job belongs to your recruiter account, so applying is disabled for this logged-in user."
-                      : "Login, review your CV, answer recruiter questions, and submit your application from one clean popup."}
+                      : "Complete your candidate profile, review your CV, answer recruiter questions, and submit your application from one clean popup."}
                   </p>
 
                   <ApplyButton
@@ -637,7 +748,7 @@ export default function PublicJobDetailsView() {
                   <p className="mt-2 text-sm font-normal leading-6 text-[#585958]">
                     {isOwnPostedJob
                       ? "To test candidate application flow, logout and login with a different candidate account."
-                      : "Keep your CV link updated before applying. A clear profile helps recruiters review you faster."}
+                      : "Complete your profile before applying. A valid phone number, role, skills, and CV help recruiters review you faster."}
                   </p>
                 </div>
               </aside>

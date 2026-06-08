@@ -84,16 +84,21 @@ function filterJobs(jobs, filters) {
     const searchableText = getJobSearchText(job);
 
     const matchesSearch = search ? searchableText.includes(search) : true;
+
+    const jobLocation = normalize(job.location);
+
     const matchesLocation = location
-      ? normalize(job.location).includes(location) ||
-        normalize(location).includes(normalize(job.location))
+      ? jobLocation.includes(location) || location.includes(jobLocation)
       : true;
+
     const matchesJobType = jobType
       ? normalize(job.job_type).includes(jobType)
       : true;
+
     const matchesWorkMode = workMode
       ? normalize(job.work_mode).includes(workMode)
       : true;
+
     const matchesTechStack = matchesTechStacks(job, filters.techStacks);
     const matchesSalary = matchesSalaryRange(job, filters.salaryRange);
 
@@ -116,7 +121,9 @@ function getRecommendedScore(job, isLoggedIn) {
   if (text.includes("frontend")) score += 8;
   if (text.includes("react")) score += 8;
   if (text.includes("next")) score += 6;
+  if (text.includes("javascript")) score += 6;
   if (text.includes("intern")) score += 4;
+  if (text.includes("developer")) score += 4;
   if (job.status === "active") score += 4;
 
   score += Math.min(getSalaryValue(job) / 20000, 10);
@@ -181,6 +188,7 @@ export default function JobsList() {
 
     try {
       const data = await listPublicActiveJobs();
+
       setJobs(Array.isArray(data) ? data : []);
       setVisibleCount(DEFAULT_VISIBLE_COUNT);
     } catch (error) {
@@ -193,8 +201,8 @@ export default function JobsList() {
 
   useEffect(() => {
     const storedUser = getStoredUser();
-    setCurrentUser(storedUser);
 
+    setCurrentUser(storedUser);
     loadJobs();
   }, []);
 
@@ -241,18 +249,18 @@ export default function JobsList() {
   }
 
   return (
-    <section className="bg-white px-6 py-12 font-sans lg:px-8">
-      <div className="mx-auto max-w-36.2517.5pxxl">
+    <section className="bg-white px-4 py-12 font-sans sm:px-5 lg:px-8">
+      <div className="mx-auto w-full max-w-[1180px]">
         <div className="mb-7 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <h2 className="text-[32px] font-medium tracking-tight text-[#202020] md:text-[38px]">
+            <h2 className="text-[30px] font-medium tracking-tight text-[#202020] md:text-[36px]">
               {isLoading ? "Loading jobs..." : `${sortedJobs.length} total jobs`}
             </h2>
 
             <p className="mt-2 text-[15px] font-normal text-[#585958]">
               {isLoggedIn
                 ? "Recommended active roles based on your profile and search filters."
-                : "Explore active roles from trusted companies. Login to unlock AI match scores."}
+                : "Explore active roles from trusted companies. Login to unlock better matches."}
             </p>
           </div>
 
@@ -307,6 +315,7 @@ export default function JobsList() {
             <p className="text-base font-medium text-[#202020]">
               No matching jobs found.
             </p>
+
             <p className="mt-2 text-sm font-normal text-[#585958]">
               Try changing your search keywords, location, or filters.
             </p>
@@ -326,7 +335,8 @@ export default function JobsList() {
                 </button>
 
                 <p className="text-xs font-normal text-slate-400">
-                  {hiddenJobsCount} more job{hiddenJobsCount === 1 ? "" : "s"} available
+                  {hiddenJobsCount} more job
+                  {hiddenJobsCount === 1 ? "" : "s"} available
                 </p>
               </>
             ) : (

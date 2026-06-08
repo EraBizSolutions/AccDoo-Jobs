@@ -11,27 +11,16 @@ import { FiLogOut, FiUser } from "react-icons/fi";
 import { getCurrentUser } from "@/lib/api/authApi";
 import {
   clearAuthData,
-  getCandidateProfilePhoto,
   getStoredUser,
   saveAuthData,
   setSelectedLoginMode,
 } from "@/lib/utils/tokenStorage";
 
-function ProfileAvatar({ user, photo }) {
+function ProfileAvatar({ user }) {
   const firstLetter =
     user?.name?.trim()?.charAt(0)?.toUpperCase() ||
     user?.email?.trim()?.charAt(0)?.toUpperCase() ||
     "U";
-
-  if (photo) {
-    return (
-      <img
-        src={photo}
-        alt="Profile"
-        className="h-full w-full rounded-full object-cover"
-      />
-    );
-  }
 
   return (
     <span className="grid h-full w-full place-items-center rounded-full bg-[#F7631E] text-sm font-medium text-white">
@@ -47,18 +36,12 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [profilePhoto, setProfilePhoto] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
 
     async function syncCurrentUser() {
       const storedUser = getStoredUser();
-      const storedPhoto = getCandidateProfilePhoto();
-
-      if (storedPhoto && isMounted) {
-        setProfilePhoto(storedPhoto);
-      }
 
       if (storedUser && isMounted) {
         setCurrentUser(storedUser);
@@ -85,7 +68,6 @@ export default function Navbar() {
 
     function handleAuthUpdate() {
       setCurrentUser(getStoredUser());
-      setProfilePhoto(getCandidateProfilePhoto());
     }
 
     window.addEventListener("jobsera:auth-updated", handleAuthUpdate);
@@ -113,7 +95,6 @@ export default function Navbar() {
   function handleLogout() {
     clearAuthData();
     setCurrentUser(null);
-    setProfilePhoto(null);
     setOpen(false);
     setProfileOpen(false);
     router.push("/login");
@@ -178,14 +159,14 @@ export default function Navbar() {
                 className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white p-1 shadow-sm transition hover:border-[#F7631E]"
                 aria-label="Open profile menu"
               >
-                <ProfileAvatar user={currentUser} photo={profilePhoto} />
+                <ProfileAvatar user={currentUser} />
               </button>
 
               {profileOpen ? (
                 <div className="absolute right-0 top-[calc(100%+12px)] z-50 w-72 overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-900/10">
                   <div className="flex items-center gap-3 rounded-2xl bg-[#F9FBFB] p-3">
                     <div className="h-12 w-12 shrink-0 rounded-full">
-                      <ProfileAvatar user={currentUser} photo={profilePhoto} />
+                      <ProfileAvatar user={currentUser} />
                     </div>
 
                     <div className="min-w-0">
@@ -298,7 +279,7 @@ export default function Navbar() {
                     className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-[#F9FBFB] px-4 py-3 text-left"
                   >
                     <div className="h-11 w-11 rounded-full">
-                      <ProfileAvatar user={currentUser} photo={profilePhoto} />
+                      <ProfileAvatar user={currentUser} />
                     </div>
 
                     <div>

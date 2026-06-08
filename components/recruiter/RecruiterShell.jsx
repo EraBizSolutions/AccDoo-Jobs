@@ -7,11 +7,15 @@ import {
   FiBell,
   FiBriefcase,
   FiChevronDown,
+  FiChevronLeft,
+  FiChevronRight,
   FiGrid,
   FiLogOut,
+  FiMenu,
   FiPlus,
   FiUser,
   FiUsers,
+  FiX,
 } from "react-icons/fi";
 
 import { clearAuthData, getStoredUser } from "@/lib/utils/tokenStorage";
@@ -57,7 +61,7 @@ function getInitial(nameOrEmail) {
   return String(nameOrEmail).trim().charAt(0).toUpperCase();
 }
 
-function SidebarLink({ item }) {
+function SidebarLink({ item, isCollapsed = false, onClick }) {
   const pathname = usePathname();
   const Icon = item.icon;
   const isActive = isActivePath(pathname, item.href);
@@ -65,61 +69,115 @@ function SidebarLink({ item }) {
   return (
     <Link
       href={item.href}
+      onClick={onClick}
+      title={isCollapsed ? item.label : undefined}
       className={`group flex items-center justify-between rounded-xl px-4 py-3 text-[15px] font-medium transition ${
+        isCollapsed ? "justify-center px-0" : ""
+      } ${
         isActive
           ? "bg-[#EAF5F1] text-[#2E8D76]"
           : "text-[#6B7280] hover:bg-slate-50 hover:text-[#2E8D76]"
       }`}
     >
-      <span className="flex items-center gap-3">
+      <span
+        className={`flex items-center gap-3 ${
+          isCollapsed ? "justify-center" : ""
+        }`}
+      >
         <Icon
           size={18}
           className={isActive ? "text-[#2E8D76]" : "text-[#6B7280]"}
         />
-        {item.label}
+
+        {!isCollapsed ? item.label : null}
       </span>
 
-      {isActive ? (
+      {!isCollapsed && isActive ? (
         <span className="h-2 w-2 rounded-full bg-[#2E8D76]" />
       ) : null}
     </Link>
   );
 }
 
-function RecruiterSidebar() {
+function RecruiterSidebarContent({
+  isCollapsed = false,
+  onToggleCollapse,
+  showCloseButton = false,
+  onClose,
+  onNavigate,
+}) {
   return (
-    <aside className="fixed left-0 top-0 z-40 hidden h-screen w-[260px] border-r border-[#E5E7EB] bg-[#F8FAFA] lg:block">
-      <div className="flex h-[76px] items-center border-b border-[#E5E7EB] px-7">
-        <Link href="/recruiter/dashboard" className="flex items-center gap-3">
+    <div className="relative h-full">
+      {showCloseButton ? (
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 z-10 grid h-9 w-9 place-items-center rounded-full bg-white text-[#667085] shadow-sm transition hover:bg-slate-50 hover:text-[#F7631E] lg:hidden"
+          aria-label="Close recruiter menu"
+        >
+          <FiX size={19} />
+        </button>
+      ) : null}
+
+      {!showCloseButton ? (
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="absolute -right-3 top-[88px] z-20 grid h-7 w-7 place-items-center rounded-lg bg-[#2E8D76] text-white shadow-md shadow-emerald-100 transition hover:bg-[#267963]"
+          aria-label={isCollapsed ? "Open sidebar" : "Collapse sidebar"}
+        >
+          {isCollapsed ? <FiChevronRight size={16} /> : <FiChevronLeft size={16} />}
+        </button>
+      ) : null}
+
+      <div
+        className={`flex h-[76px] items-center border-b border-[#E5E7EB] transition-all ${
+          isCollapsed ? "justify-center px-0" : "px-7"
+        }`}
+      >
+        <Link
+          href="/recruiter/dashboard"
+          onClick={onNavigate}
+          className={`flex items-center gap-3 ${isCollapsed ? "justify-center" : ""}`}
+        >
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#F7631E] text-white shadow-lg shadow-orange-200">
             <FiBriefcase size={20} />
           </div>
 
-          <div>
-            <p className="text-[24px] font-bold tracking-tight text-[#0F172A]">
-              AccDoo
-            </p>
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#98A2B3]">
-              ATS
-            </p>
-          </div>
+          {!isCollapsed ? (
+            <div>
+              <p className="text-[24px] font-bold tracking-tight text-[#0F172A]">
+                AccDoo
+              </p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#98A2B3]">
+                ATS
+              </p>
+            </div>
+          ) : null}
         </Link>
       </div>
 
-      <nav className="px-5 py-7">
+      <nav className={`${isCollapsed ? "px-3" : "px-5"} py-7`}>
         <div className="space-y-7">
           {navigationItems.map((group) => (
             <div key={group.group}>
-              <div className="mb-3 flex items-center justify-between px-3">
-                <p className="text-[12px] font-bold uppercase tracking-[0.24em] text-[#98A2B3]">
-                  {group.group}
-                </p>
-                <FiChevronDown size={14} className="text-[#98A2B3]" />
-              </div>
+              {!isCollapsed ? (
+                <div className="mb-3 flex items-center justify-between px-3">
+                  <p className="text-[12px] font-bold uppercase tracking-[0.24em] text-[#98A2B3]">
+                    {group.group}
+                  </p>
+                  <FiChevronDown size={14} className="text-[#98A2B3]" />
+                </div>
+              ) : null}
 
               <div className="space-y-1">
                 {group.items.map((item) => (
-                  <SidebarLink key={item.href} item={item} />
+                  <SidebarLink
+                    key={item.href}
+                    item={item}
+                    isCollapsed={isCollapsed}
+                    onClick={onNavigate}
+                  />
                 ))}
               </div>
             </div>
@@ -127,14 +185,60 @@ function RecruiterSidebar() {
         </div>
       </nav>
 
-      <div className="absolute bottom-0 left-0 right-0 border-t border-[#E5E7EB] px-7 py-5">
-        <p className="text-xs font-normal text-[#98A2B3]">Version: 1.0.0</p>
-      </div>
+      {!isCollapsed ? (
+        <div className="absolute bottom-0 left-0 right-0 border-t border-[#E5E7EB] px-7 py-5">
+          <p className="text-xs font-normal text-[#98A2B3]">Version: 1.0.0</p>
+        </div>
+      ) : (
+        <div className="absolute bottom-0 left-0 right-0 border-t border-[#E5E7EB] py-5 text-center">
+          <p className="text-[10px] font-medium text-[#98A2B3]">v1</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RecruiterSidebar({ isCollapsed, onToggleCollapse }) {
+  return (
+    <aside
+      className={`fixed left-0 top-0 z-40 hidden h-screen border-r border-[#E5E7EB] bg-[#F8FAFA] transition-all duration-300 lg:block ${
+        isCollapsed ? "w-[88px]" : "w-[260px]"
+      }`}
+    >
+      <RecruiterSidebarContent
+        isCollapsed={isCollapsed}
+        onToggleCollapse={onToggleCollapse}
+      />
     </aside>
   );
 }
 
-function RecruiterTopbar() {
+function MobileRecruiterSidebar({ isOpen, onClose }) {
+  return (
+    <>
+      <div
+        onClick={onClose}
+        className={`fixed inset-0 z-[80] bg-[#202020]/40 backdrop-blur-sm transition lg:hidden ${
+          isOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      />
+
+      <aside
+        className={`fixed left-0 top-0 z-[90] h-screen w-[280px] border-r border-[#E5E7EB] bg-[#F8FAFA] shadow-2xl transition-transform duration-300 lg:hidden ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <RecruiterSidebarContent
+          showCloseButton
+          onClose={onClose}
+          onNavigate={onClose}
+        />
+      </aside>
+    </>
+  );
+}
+
+function RecruiterTopbar({ isSidebarCollapsed, onOpenMobileMenu }) {
   const router = useRouter();
   const dropdownRef = useRef(null);
 
@@ -169,12 +273,26 @@ function RecruiterTopbar() {
   const initial = getInitial(displayName || displayEmail);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-[#E5E7EB] bg-white lg:ml-[260px]">
+    <header
+      className={`sticky top-0 z-30 border-b border-[#E5E7EB] bg-white transition-all duration-300 ${
+        isSidebarCollapsed ? "lg:ml-[88px]" : "lg:ml-[260px]"
+      }`}
+    >
       <div className="flex h-[76px] items-center justify-between px-5 lg:px-8">
         <div className="flex items-center gap-3 lg:hidden">
+          <button
+            type="button"
+            onClick={onOpenMobileMenu}
+            className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-[#667085] transition hover:border-[#F7631E] hover:text-[#F7631E]"
+            aria-label="Open recruiter menu"
+          >
+            <FiMenu size={20} />
+          </button>
+
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#F7631E] text-white">
             <FiBriefcase size={20} />
           </div>
+
           <p className="text-[23px] font-bold tracking-tight text-[#0F172A]">
             AccDoo
           </p>
@@ -268,12 +386,49 @@ function RecruiterTopbar() {
 }
 
 export default function RecruiterShell({ children }) {
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (!isMobileSidebarOpen) return;
+
+    function handleEscape(event) {
+      if (event.key === "Escape") {
+        setIsMobileSidebarOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isMobileSidebarOpen]);
+
   return (
     <main className="min-h-screen bg-[#F8FAFA] font-sans">
-      <RecruiterSidebar />
-      <RecruiterTopbar />
+      <RecruiterSidebar
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() =>
+          setIsSidebarCollapsed((currentValue) => !currentValue)
+        }
+      />
 
-      <section className="lg:ml-[260px]">
+      <MobileRecruiterSidebar
+        isOpen={isMobileSidebarOpen}
+        onClose={() => setIsMobileSidebarOpen(false)}
+      />
+
+      <RecruiterTopbar
+        isSidebarCollapsed={isSidebarCollapsed}
+        onOpenMobileMenu={() => setIsMobileSidebarOpen(true)}
+      />
+
+      <section
+        className={`transition-all duration-300 ${
+          isSidebarCollapsed ? "lg:ml-[88px]" : "lg:ml-[260px]"
+        }`}
+      >
         <div className="px-5 py-8 lg:px-9">{children}</div>
       </section>
     </main>

@@ -1,73 +1,160 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FiCheck, FiMapPin, FiSave, FiX } from "react-icons/fi";
+import {
+  FiAlertCircle,
+  FiBriefcase,
+  FiCheckCircle,
+  FiFileText,
+  FiLoader,
+  FiMapPin,
+  FiSave,
+  FiX,
+} from "react-icons/fi";
 
-const GOOGLE_MAPS_SCRIPT_ID = "jobsera-google-maps-places-script";
+const GOOGLE_MAPS_SCRIPT_ID = "accdoo-google-maps-places-script";
 
-const WORK_MODE_OPTIONS = [
-  { label: "Onsite", value: "onsite" },
-  { label: "Hybrid", value: "hybrid" },
-  { label: "Remote", value: "remote" },
+const MIN_REQUIRED_SKILLS = 2;
+const MIN_DESCRIPTION_LENGTH = 50;
+const MAX_DESCRIPTION_LENGTH = 5000;
+
+const WORK_MODES = [
+  { value: "onsite", label: "On-site" },
+  { value: "remote", label: "Remote" },
+  { value: "hybrid", label: "Hybrid" },
 ];
 
-const JOB_TYPE_OPTIONS = [
-  { label: "Internship", value: "internship" },
-  { label: "Full-time", value: "full-time" },
-  { label: "Part-time", value: "part-time" },
-  { label: "Contract", value: "contract" },
+const JOB_TYPES = [
+  { value: "internship", label: "Internship" },
+  { value: "full-time", label: "Full-time" },
+  { value: "part-time", label: "Part-time" },
+  { value: "contract", label: "Contract" },
+  { value: "temporary", label: "Temporary" },
 ];
 
-const STATUS_OPTIONS = [
-  {
-    label: "Draft",
-    value: "draft",
-    helper: "Hidden from public jobs",
-    tone: "draft",
-  },
-  {
-    label: "Active",
-    value: "active",
-    helper: "Visible to candidates",
-    tone: "active",
-  },
-  {
-    label: "Closed",
-    value: "closed",
-    helper: "Not accepting applicants",
-    tone: "closed",
-  },
+const JOB_STATUSES = [
+  { value: "draft", label: "Draft" },
+  { value: "active", label: "Active" },
+  { value: "closed", label: "Closed" },
 ];
 
 const SKILL_SUGGESTIONS = [
-  "React",
-  "Next.js",
+  "HTML",
+  "CSS",
   "JavaScript",
   "TypeScript",
-  "Tailwind CSS",
+  "React",
+  "Next.js",
   "Node.js",
   "Express.js",
-  "FastAPI",
   "Python",
-  "PostgreSQL",
+  "FastAPI",
+  "Java",
+  "Spring Boot",
+  "C#",
+  ".NET",
+  "PHP",
+  "Laravel",
   "MongoDB",
+  "PostgreSQL",
+  "MySQL",
   "SQL",
   "REST API",
   "Git",
-  "Docker",
+  "GitHub",
   "AWS",
-  "Firebase",
+  "Docker",
+  "Tailwind CSS",
+  "Figma",
+  "UI/UX",
+  "Communication",
+  "Problem Solving",
 ];
 
 const inputClass =
-  "w-full rounded-2xl border bg-white px-4 py-3 text-sm font-normal text-[#202020] outline-none transition placeholder:text-slate-300 focus:border-[#F7631E] focus:ring-4 focus:ring-orange-50";
+  "w-full min-w-0 rounded-2xl border bg-white px-4 py-3 text-sm font-normal text-[#202020] outline-none transition placeholder:text-slate-300 focus:border-[#F7631E] focus:ring-4 focus:ring-orange-50";
 
 const labelClass = "text-sm font-normal text-[#585958]";
+
+function RequiredMark() {
+  return <span className="text-[#F7631E]">*</span>;
+}
+
+function FieldError({ message }) {
+  if (!message) return null;
+
+  return <p className="mt-2 text-xs font-normal text-red-500">{message}</p>;
+}
+
+function SalaryPrefix() {
+  return (
+    <span className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-semibold text-[#F7631E]">
+      LKR
+    </span>
+  );
+}
+
+function cleanText(value) {
+  return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function sanitizeJobTitle(value) {
+  return String(value || "")
+    .replace(/[^A-Za-z0-9 .#/+()-]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function sanitizeCompanyName(value) {
+  return String(value || "")
+    .replace(/[^A-Za-z0-9 .&()-]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function sanitizeLocation(value) {
+  return String(value || "")
+    .replace(/[^A-Za-z0-9 ,./-]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function sanitizeSkill(value) {
+  return String(value || "")
+    .replace(/[^A-Za-z0-9 .#/+()-]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function sanitizeSalary(value) {
+  return String(value || "").replace(/[^0-9]/g, "").slice(0, 9);
+}
+
+function sanitizeDescription(value) {
+  return String(value || "").replace(/[<>]/g, "");
+}
+
+function getCleanSkillList(skills) {
+  const uniqueSkills = [];
+
+  skills.forEach((skill) => {
+    const cleanSkill = sanitizeSkill(skill).trim();
+
+    if (!cleanSkill || cleanSkill.length < 2 || cleanSkill.length > 60) return;
+
+    const alreadyExists = uniqueSkills.some(
+      (existingSkill) =>
+        existingSkill.toLowerCase() === cleanSkill.toLowerCase()
+    );
+
+    if (!alreadyExists) {
+      uniqueSkills.push(cleanSkill);
+    }
+  });
+
+  return uniqueSkills;
+}
 
 function injectGooglePlacesDropdownStyles() {
   if (typeof document === "undefined") return;
 
-  const styleId = "jobsera-google-places-style";
+  const styleId = "accdoo-google-places-style";
 
   if (document.getElementById(styleId)) return;
 
@@ -145,78 +232,129 @@ function loadGoogleMapsScript(apiKey) {
   });
 }
 
-function getStatusToneClasses(option, isSelected) {
-  if (!isSelected) {
-    return "border-slate-200 bg-white text-[#585958] hover:border-slate-300 hover:bg-slate-50";
+function validateJobForm(formData, skills) {
+  const errors = {};
+
+  const title = cleanText(formData.title);
+  const companyName = cleanText(formData.company_name);
+  const description = String(formData.description || "").trim();
+  const location = cleanText(formData.location);
+  const cleanSkills = getCleanSkillList(skills);
+
+  const salaryMin =
+    formData.salary_min === "" || formData.salary_min === null
+      ? null
+      : Number(formData.salary_min);
+
+  const salaryMax =
+    formData.salary_max === "" || formData.salary_max === null
+      ? null
+      : Number(formData.salary_max);
+
+  if (!title) {
+    errors.title = "Job title is required.";
+  } else if (title.length < 3) {
+    errors.title = "Job title must be at least 3 characters.";
+  } else if (title.length > 100) {
+    errors.title = "Job title must be below 100 characters.";
+  } else if (!/^[A-Za-z0-9 .#/+()-]+$/.test(title)) {
+    errors.title =
+      "Use only letters, numbers, spaces, dot, #, slash, plus, hyphen, or brackets.";
   }
 
-  if (option.tone === "active") {
-    return "border-green-500 bg-green-50 text-green-700 ring-4 ring-green-50";
+  if (!companyName) {
+    errors.company_name = "Company name is required.";
+  } else if (companyName.length < 2) {
+    errors.company_name = "Company name must be at least 2 characters.";
+  } else if (companyName.length > 150) {
+    errors.company_name = "Company name must be below 150 characters.";
+  } else if (!/^[A-Za-z0-9 .&()-]+$/.test(companyName)) {
+    errors.company_name =
+      "Company name can use only letters, numbers, spaces, dot, &, hyphen, or brackets.";
   }
 
-  if (option.tone === "closed") {
-    return "border-red-500 bg-red-50 text-red-700 ring-4 ring-red-50";
+  if (!description) {
+    errors.description = "Job description is required.";
+  } else if (description.length < MIN_DESCRIPTION_LENGTH) {
+    errors.description = `Job description needs at least ${MIN_DESCRIPTION_LENGTH} characters. Add ${
+      MIN_DESCRIPTION_LENGTH - description.length
+    } more.`;
+  } else if (description.length > MAX_DESCRIPTION_LENGTH) {
+    errors.description = `Job description must be below ${MAX_DESCRIPTION_LENGTH} characters.`;
   }
 
-  return "border-slate-400 bg-slate-50 text-slate-700 ring-4 ring-slate-100";
+  if (!location) {
+    errors.location = "Job location is required.";
+  } else if (!/^[A-Za-z0-9 ,./-]+$/.test(location)) {
+    errors.location =
+      "Location can use only letters, numbers, spaces, comma, dot, slash, or hyphen.";
+  }
+
+  if (!WORK_MODES.some((mode) => mode.value === formData.work_mode)) {
+    errors.work_mode = "Please select a valid work mode.";
+  }
+
+  if (!JOB_TYPES.some((type) => type.value === formData.job_type)) {
+    errors.job_type = "Please select a valid job type.";
+  }
+
+  if (!JOB_STATUSES.some((status) => status.value === formData.status)) {
+    errors.status = "Please select a valid job status.";
+  }
+
+  if (cleanSkills.length < MIN_REQUIRED_SKILLS) {
+    errors.required_skills = `Add at least ${MIN_REQUIRED_SKILLS} required skills.`;
+  }
+
+  if (salaryMin !== null && (Number.isNaN(salaryMin) || salaryMin < 0)) {
+    errors.salary_min = "Salary min must be a valid positive number.";
+  }
+
+  if (salaryMax !== null && (Number.isNaN(salaryMax) || salaryMax < 0)) {
+    errors.salary_max = "Salary max must be a valid positive number.";
+  }
+
+  if (salaryMin !== null && salaryMax !== null && salaryMin > salaryMax) {
+    errors.salary_max = "Salary max must be higher than salary min.";
+  }
+
+  if (salaryMin !== null && salaryMin > 10000000) {
+    errors.salary_min = "Salary min looks too high. Maximum allowed is 10,000,000.";
+  }
+
+  if (salaryMax !== null && salaryMax > 10000000) {
+    errors.salary_max = "Salary max looks too high. Maximum allowed is 10,000,000.";
+  }
+
+  return errors;
 }
 
-function getNormalChoiceClasses(isSelected) {
-  return isSelected
-    ? "border-[#F7631E] bg-orange-50 text-[#F7631E] ring-4 ring-orange-50"
-    : "border-slate-200 bg-white text-[#585958] hover:border-[#F7631E] hover:bg-orange-50/40";
-}
-
-function FieldError({ message }) {
-  if (!message) return null;
-
-  return <p className="mt-2 text-xs font-normal text-red-500">{message}</p>;
-}
-
-function ChoiceTabs({ label, value, options, onChange, statusMode = false }) {
-  return (
-    <div>
-      <label className={labelClass}>{label}</label>
-
-      <div className="mt-2 grid gap-2 sm:grid-cols-3">
-        {options.map((option) => {
-          const isSelected = value === option.value;
-          const className = statusMode
-            ? getStatusToneClasses(option, isSelected)
-            : getNormalChoiceClasses(isSelected);
-
-          return (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => onChange(option.value)}
-              className={`rounded-2xl border px-4 py-3 text-left transition ${className}`}
-            >
-              <span className="flex items-center justify-between gap-2 text-sm font-medium">
-                {option.label}
-                {isSelected ? <FiCheck size={16} /> : null}
-              </span>
-
-              {option.helper ? (
-                <span className="mt-1 block text-xs font-normal opacity-70">
-                  {option.helper}
-                </span>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function SkillsInput({ skills, setSkills, error }) {
+function SkillsInput({ skills, setSkills, error, markTouched }) {
   const [skillInput, setSkillInput] = useState("");
+  const [skillError, setSkillError] = useState("");
 
   function addSkill(rawSkill) {
-    const cleanSkill = rawSkill.trim();
+    const cleanSkill = sanitizeSkill(rawSkill).trim();
+
+    setSkillError("");
 
     if (!cleanSkill) return;
+
+    if (cleanSkill.length < 2 || cleanSkill.length > 60) {
+      setSkillError("Skill must be between 2 and 60 characters.");
+      setSkillInput("");
+      markTouched("required_skills");
+      return;
+    }
+
+    if (!/^[A-Za-z0-9 .#/+()-]+$/.test(cleanSkill)) {
+      setSkillError(
+        "Skill can use only letters, numbers, spaces, dot, #, slash, plus, hyphen, or brackets."
+      );
+      setSkillInput("");
+      markTouched("required_skills");
+      return;
+    }
 
     const alreadyExists = skills.some(
       (skill) => skill.toLowerCase() === cleanSkill.toLowerCase()
@@ -224,15 +362,18 @@ function SkillsInput({ skills, setSkills, error }) {
 
     if (alreadyExists) {
       setSkillInput("");
+      markTouched("required_skills");
       return;
     }
 
     setSkills([...skills, cleanSkill]);
     setSkillInput("");
+    markTouched("required_skills");
   }
 
   function removeSkill(skillToRemove) {
     setSkills(skills.filter((skill) => skill !== skillToRemove));
+    markTouched("required_skills");
   }
 
   function handleKeyDown(event) {
@@ -250,28 +391,31 @@ function SkillsInput({ skills, setSkills, error }) {
     (suggestion) =>
       suggestion.toLowerCase().includes(skillInput.toLowerCase()) &&
       !skills.some((skill) => skill.toLowerCase() === suggestion.toLowerCase())
-  ).slice(0, 6);
+  ).slice(0, 8);
 
   return (
     <div>
-      <label className={labelClass}>Required skills</label>
+      <label className={labelClass}>
+        Required skills <RequiredMark />
+      </label>
 
       <div
         className={`mt-2 rounded-2xl border bg-white px-3 py-3 transition focus-within:border-[#F7631E] focus-within:ring-4 focus-within:ring-orange-50 ${
-          error ? "border-red-300" : "border-slate-200"
+          error || skillError ? "border-red-300" : "border-slate-200"
         }`}
       >
         <div className="flex flex-wrap gap-2">
           {skills.map((skill) => (
             <span
               key={skill}
-              className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1.5 text-xs font-normal text-[#F7631E]"
+              className="inline-flex max-w-full items-center gap-2 rounded-full bg-orange-50 px-3 py-1.5 text-xs font-normal text-[#F7631E]"
             >
-              {skill}
+              <span className="truncate">{skill}</span>
+
               <button
                 type="button"
                 onClick={() => removeSkill(skill)}
-                className="rounded-full hover:bg-orange-100"
+                className="shrink-0 rounded-full hover:bg-orange-100"
               >
                 <FiX size={13} />
               </button>
@@ -280,14 +424,26 @@ function SkillsInput({ skills, setSkills, error }) {
 
           <input
             value={skillInput}
-            onChange={(event) => setSkillInput(event.target.value)}
+            onChange={(event) => {
+              setSkillInput(sanitizeSkill(event.target.value));
+              setSkillError("");
+              markTouched("required_skills");
+            }}
             onKeyDown={handleKeyDown}
             onBlur={() => addSkill(skillInput)}
-            placeholder={skills.length ? "Add more skills..." : "Type skill and press Enter"}
-            className="min-w-40 flex-1 bg-transparent px-1 py-1.5 text-sm font-normal text-[#202020] outline-none placeholder:text-slate-300"
+            placeholder={
+              skills.length
+                ? "Add more skills..."
+                : `Add at least ${MIN_REQUIRED_SKILLS} skills`
+            }
+            className="min-w-[160px] flex-1 bg-transparent px-1 py-1.5 text-sm font-normal text-[#202020] outline-none placeholder:text-slate-300"
           />
         </div>
       </div>
+
+      <p className="mt-2 text-xs font-normal text-slate-400">
+        Minimum {MIN_REQUIRED_SKILLS} skills required. Press Enter or comma to add.
+      </p>
 
       {skillInput && filteredSuggestions.length ? (
         <div className="mt-2 flex flex-wrap gap-2">
@@ -305,64 +461,9 @@ function SkillsInput({ skills, setSkills, error }) {
         </div>
       ) : null}
 
-      <FieldError message={error} />
-
-      <p className="mt-2 text-xs font-normal text-slate-400">
-        Press Enter or comma after each skill.
-      </p>
+      <FieldError message={skillError || error} />
     </div>
   );
-}
-
-function validateJobForm(formData, skills) {
-  const errors = {};
-  const title = formData.title.trim();
-  const companyName = formData.company_name.trim();
-  const description = formData.description.trim();
-  const location = formData.location.trim();
-
-  if (!title) {
-    errors.title = "Job title is required.";
-  } else if (title.length < 3) {
-    errors.title = "Job title must be at least 3 characters.";
-  } else if (!/^[A-Za-z0-9\s-]+$/.test(title)) {
-    errors.title = "Use only letters, numbers, spaces, and hyphen (-).";
-  }
-
-  if (!companyName) {
-    errors.company_name = "Company name is required.";
-  }
-
-  if (!description) {
-    errors.description = "Job description is required.";
-  } else if (description.length < 50) {
-    errors.description = `Add ${50 - description.length} more characters for a clear description.`;
-  }
-
-  if (!location) {
-    errors.location = "Location is required.";
-  }
-
-  if (!skills.length) {
-    errors.required_skills = "Add at least one required skill.";
-  }
-
-  const salaryMin = formData.salary_min ? Number(formData.salary_min) : null;
-  const salaryMax = formData.salary_max ? Number(formData.salary_max) : null;
-
-  if (salaryMin !== null && salaryMin < 0) {
-    errors.salary_min = "Salary min cannot be negative.";
-  }
-
-  if (salaryMax !== null && salaryMax < 0) {
-    errors.salary_max = "Salary max cannot be negative.";
-  }
-
-  if (salaryMin !== null && salaryMax !== null && salaryMin > salaryMax) {
-    errors.salary_max = "Salary max must be higher than salary min.";
-  }
-
-  return errors;
 }
 
 export default function RecruiterJobForm({
@@ -377,19 +478,20 @@ export default function RecruiterJobForm({
   const autocompleteRef = useRef(null);
 
   const [formData, setFormData] = useState(initialFormData);
-  const [skills, setSkills] = useState(initialSkills);
+  const [skills, setSkills] = useState(getCleanSkillList(initialSkills));
   const [touched, setTouched] = useState({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [locationError, setLocationError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrorMessage, setFormErrorMessage] = useState("");
+  const [formStatusMessage, setFormStatusMessage] = useState("");
 
   useEffect(() => {
     setFormData(initialFormData);
   }, [initialFormData]);
 
   useEffect(() => {
-    setSkills(initialSkills);
+    setSkills(getCleanSkillList(initialSkills));
   }, [initialSkills]);
 
   useEffect(() => {
@@ -400,7 +502,9 @@ export default function RecruiterJobForm({
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
     if (!apiKey) {
-      setLocationError("Location autocomplete is not configured.");
+      setLocationError(
+        "Google Maps key is missing. You can still type location manually."
+      );
       return;
     }
 
@@ -410,19 +514,27 @@ export default function RecruiterJobForm({
       try {
         await loadGoogleMapsScript(apiKey);
 
-        if (!isMounted || !locationInputRef.current || !window.google?.maps?.places) {
-          setLocationError("Location autocomplete could not load.");
+        if (
+          !isMounted ||
+          !locationInputRef.current ||
+          !window.google?.maps?.places
+        ) {
+          setLocationError(
+            "Location autocomplete could not load. You can type manually."
+          );
           return;
         }
 
         if (autocompleteRef.current && window.google?.maps?.event) {
-          window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
+          window.google.maps.event.clearInstanceListeners(
+            autocompleteRef.current
+          );
         }
 
         autocompleteRef.current = new window.google.maps.places.Autocomplete(
           locationInputRef.current,
           {
-            types: ["(cities)"],
+            types: ["geocode"],
             componentRestrictions: { country: "lk" },
             fields: ["formatted_address", "name"],
           }
@@ -439,7 +551,7 @@ export default function RecruiterJobForm({
 
           setFormData((currentData) => ({
             ...currentData,
-            location: selectedLocation,
+            location: sanitizeLocation(selectedLocation),
           }));
 
           setTouched((currentTouched) => ({
@@ -452,7 +564,7 @@ export default function RecruiterJobForm({
 
         setLocationError("");
       } catch {
-        setLocationError("Location autocomplete failed to load.");
+        setLocationError("Location autocomplete failed. You can type manually.");
       }
     }
 
@@ -478,6 +590,12 @@ export default function RecruiterJobForm({
     )
   );
 
+  const descriptionLength = String(formData.description || "").trim().length;
+  const descriptionRemaining = Math.max(
+    MIN_DESCRIPTION_LENGTH - descriptionLength,
+    0
+  );
+
   function markTouched(name) {
     setTouched((currentTouched) => ({
       ...currentTouched,
@@ -487,25 +605,37 @@ export default function RecruiterJobForm({
 
   function handleChange(event) {
     const { name, value } = event.target;
+    let nextValue = value;
 
     if (name === "title") {
-      const cleanedValue = value.replace(/[^A-Za-z0-9\s-]/g, "");
+      nextValue = sanitizeJobTitle(value).slice(0, 100);
+    }
 
-      setFormData((currentData) => ({
-        ...currentData,
-        title: cleanedValue,
-      }));
+    if (name === "company_name") {
+      nextValue = sanitizeCompanyName(value).slice(0, 150);
+    }
 
-      markTouched("title");
-      return;
+    if (name === "description") {
+      nextValue = sanitizeDescription(value).slice(0, MAX_DESCRIPTION_LENGTH);
+    }
+
+    if (name === "location") {
+      nextValue = sanitizeLocation(value).slice(0, 120);
+      setLocationError("");
+    }
+
+    if (name === "salary_min" || name === "salary_max") {
+      nextValue = sanitizeSalary(value);
     }
 
     setFormData((currentData) => ({
       ...currentData,
-      [name]: value,
+      [name]: nextValue,
     }));
 
     markTouched(name);
+    setFormErrorMessage("");
+    setFormStatusMessage("");
   }
 
   function updateField(name, value) {
@@ -515,6 +645,8 @@ export default function RecruiterJobForm({
     }));
 
     markTouched(name);
+    setFormErrorMessage("");
+    setFormStatusMessage("");
   }
 
   async function handleSubmit(event) {
@@ -522,10 +654,24 @@ export default function RecruiterJobForm({
 
     setSubmitAttempted(true);
     setFormErrorMessage("");
+    setFormStatusMessage("");
 
     const latestErrors = validateJobForm(formData, skills);
 
     if (Object.keys(latestErrors).length > 0) {
+      setTouched({
+        title: true,
+        company_name: true,
+        description: true,
+        location: true,
+        work_mode: true,
+        job_type: true,
+        status: true,
+        required_skills: true,
+        salary_min: true,
+        salary_max: true,
+      });
+
       setFormErrorMessage("Please fix the highlighted fields before saving.");
       return;
     }
@@ -533,16 +679,24 @@ export default function RecruiterJobForm({
     try {
       setIsSubmitting(true);
 
+      const cleanSkills = getCleanSkillList(skills);
+
       await onSubmit({
-        ...formData,
-        title: formData.title.trim(),
-        company_name: formData.company_name.trim(),
-        description: formData.description.trim(),
-        location: formData.location.trim(),
-        required_skills: skills.join(", "),
+        title: cleanText(formData.title),
+        company_name: cleanText(formData.company_name),
+        description: String(formData.description || "").trim(),
+        location: cleanText(formData.location),
+        work_mode: formData.work_mode,
+        job_type: formData.job_type,
         salary_min: formData.salary_min ? Number(formData.salary_min) : null,
         salary_max: formData.salary_max ? Number(formData.salary_max) : null,
+        required_skills: cleanSkills.join(", "),
+        status: formData.status,
       });
+
+      setFormStatusMessage(
+        mode === "edit" ? "Job updated successfully." : "Job created successfully."
+      );
     } catch (error) {
       setFormErrorMessage(error.message || "Could not save job.");
     } finally {
@@ -560,140 +714,239 @@ export default function RecruiterJobForm({
 
   return (
     <form onSubmit={handleSubmit} className="mt-7 space-y-6">
-      <div>
-        <label className={labelClass}>Job title</label>
-        <input
-          name="title"
-          value={formData.title}
-          onChange={handleChange}
-          onBlur={() => markTouched("title")}
-          placeholder="Frontend Developer Intern"
-          maxLength={100}
-          className={`mt-2 ${inputClass} ${
-            visibleErrors.title ? "border-red-300" : "border-slate-200"
-          }`}
-        />
-        <FieldError message={visibleErrors.title} />
-        <p className="mt-2 text-xs font-normal text-slate-400">
-          Letters, numbers, spaces, and hyphen only.
-        </p>
-      </div>
+      <div className="grid gap-5 md:grid-cols-2">
+        <div>
+          <label className={labelClass}>
+            Job title <RequiredMark />
+          </label>
 
-      <div>
-        <label className={labelClass}>Company name</label>
-        <input
-          name="company_name"
-          value={formData.company_name}
-          onChange={handleChange}
-          onBlur={() => markTouched("company_name")}
-          placeholder="Company name"
-          className={`mt-2 ${inputClass} ${
-            visibleErrors.company_name ? "border-red-300" : "border-slate-200"
-          }`}
-        />
-        <FieldError message={visibleErrors.company_name} />
-      </div>
+          <div className="relative mt-2">
+            <FiBriefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              onBlur={() => markTouched("title")}
+              placeholder="Frontend Developer Intern"
+              maxLength={100}
+              className={`${inputClass} pl-11 ${
+                visibleErrors.title ? "border-red-300" : "border-slate-200"
+              }`}
+            />
+          </div>
 
-      <div>
-        <label className={labelClass}>Job description</label>
-        <textarea
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          onBlur={() => markTouched("description")}
-          placeholder="Write a clear role description, responsibilities, expectations, and benefits..."
-          rows={7}
-          className={`mt-2 resize-none ${inputClass} ${
-            visibleErrors.description ? "border-red-300" : "border-slate-200"
-          }`}
-        />
-        <FieldError message={visibleErrors.description} />
-        <p className="mt-2 text-xs font-normal text-slate-400">
-          Minimum 50 characters. Current: {formData.description.trim().length}/50.
-        </p>
-      </div>
+          <p className="mt-2 text-xs font-normal text-slate-400">
+            Example: React Developer, UI/UX Designer, .NET Intern
+          </p>
+          <FieldError message={visibleErrors.title} />
+        </div>
 
-      <div>
-        <label className={labelClass}>Location</label>
-
-        <div className="relative mt-2">
-          <FiMapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div>
+          <label className={labelClass}>
+            Company name <RequiredMark />
+          </label>
 
           <input
-            ref={locationInputRef}
-            name="location"
-            value={formData.location}
+            name="company_name"
+            value={formData.company_name}
             onChange={handleChange}
-            onBlur={() => markTouched("location")}
-            placeholder="Colombo, Sri Lanka"
-            autoComplete="off"
-            className={`${inputClass} pl-11 ${
-              visibleErrors.location || locationError
+            onBlur={() => markTouched("company_name")}
+            placeholder="Company name"
+            maxLength={150}
+            className={`mt-2 ${inputClass} ${
+              visibleErrors.company_name
+                ? "border-red-300"
+                : "border-slate-200"
+            }`}
+          />
+
+          <FieldError message={visibleErrors.company_name} />
+        </div>
+
+        <div>
+          <label className={labelClass}>
+            Work mode <RequiredMark />
+          </label>
+
+          <select
+            name="work_mode"
+            value={formData.work_mode}
+            onChange={(event) => updateField("work_mode", event.target.value)}
+            onBlur={() => markTouched("work_mode")}
+            className={`mt-2 ${inputClass} ${
+              visibleErrors.work_mode ? "border-red-300" : "border-slate-200"
+            }`}
+          >
+            {WORK_MODES.map((modeOption) => (
+              <option key={modeOption.value} value={modeOption.value}>
+                {modeOption.label}
+              </option>
+            ))}
+          </select>
+
+          <FieldError message={visibleErrors.work_mode} />
+        </div>
+
+        <div>
+          <label className={labelClass}>
+            Job type <RequiredMark />
+          </label>
+
+          <select
+            name="job_type"
+            value={formData.job_type}
+            onChange={(event) => updateField("job_type", event.target.value)}
+            onBlur={() => markTouched("job_type")}
+            className={`mt-2 ${inputClass} ${
+              visibleErrors.job_type ? "border-red-300" : "border-slate-200"
+            }`}
+          >
+            {JOB_TYPES.map((typeOption) => (
+              <option key={typeOption.value} value={typeOption.value}>
+                {typeOption.label}
+              </option>
+            ))}
+          </select>
+
+          <FieldError message={visibleErrors.job_type} />
+        </div>
+
+        <div>
+          <label className={labelClass}>
+            Location <RequiredMark />
+          </label>
+
+          <div className="relative mt-2">
+            <FiMapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              ref={locationInputRef}
+              name="location"
+              value={formData.location}
+              onChange={handleChange}
+              onBlur={() => markTouched("location")}
+              placeholder="Colombo, Sri Lanka"
+              autoComplete="off"
+              className={`${inputClass} pl-11 ${
+                visibleErrors.location || locationError
+                  ? "border-red-300"
+                  : "border-slate-200"
+              }`}
+            />
+          </div>
+
+          <FieldError message={visibleErrors.location || locationError} />
+        </div>
+
+        <div>
+          <label className={labelClass}>
+            Status <RequiredMark />
+          </label>
+
+          <select
+            name="status"
+            value={formData.status}
+            onChange={(event) => updateField("status", event.target.value)}
+            onBlur={() => markTouched("status")}
+            className={`mt-2 ${inputClass} ${
+              visibleErrors.status ? "border-red-300" : "border-slate-200"
+            }`}
+          >
+            {JOB_STATUSES.map((statusOption) => (
+              <option key={statusOption.value} value={statusOption.value}>
+                {statusOption.label}
+              </option>
+            ))}
+          </select>
+
+          <FieldError message={visibleErrors.status} />
+        </div>
+
+        <div>
+          <label className={labelClass}>Salary min</label>
+
+          <div className="relative mt-2">
+            <SalaryPrefix />
+            <input
+              name="salary_min"
+              type="text"
+              inputMode="numeric"
+              value={formData.salary_min}
+              onChange={handleChange}
+              onBlur={() => markTouched("salary_min")}
+              placeholder="30000"
+              className={`${inputClass} pl-[72px] ${
+                visibleErrors.salary_min
+                  ? "border-red-300"
+                  : "border-slate-200"
+              }`}
+            />
+          </div>
+
+          <FieldError message={visibleErrors.salary_min} />
+        </div>
+
+        <div>
+          <label className={labelClass}>Salary max</label>
+
+          <div className="relative mt-2">
+            <SalaryPrefix />
+            <input
+              name="salary_max"
+              type="text"
+              inputMode="numeric"
+              value={formData.salary_max}
+              onChange={handleChange}
+              onBlur={() => markTouched("salary_max")}
+              placeholder="90000"
+              className={`${inputClass} pl-[72px] ${
+                visibleErrors.salary_max
+                  ? "border-red-300"
+                  : "border-slate-200"
+              }`}
+            />
+          </div>
+
+          <FieldError message={visibleErrors.salary_max} />
+        </div>
+      </div>
+
+      <div>
+        <label className={labelClass}>
+          Job description <RequiredMark />
+        </label>
+
+        <div className="relative mt-2">
+          <FiFileText className="absolute left-4 top-4 text-slate-400" />
+          <textarea
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            onBlur={() => markTouched("description")}
+            rows={7}
+            maxLength={MAX_DESCRIPTION_LENGTH}
+            placeholder="Write the role summary, responsibilities, requirements, and working expectations..."
+            className={`${inputClass} resize-none pl-11 ${
+              visibleErrors.description
                 ? "border-red-300"
                 : "border-slate-200"
             }`}
           />
         </div>
 
-        <FieldError message={visibleErrors.location || locationError} />
-      </div>
+        <div className="mt-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs font-normal text-slate-400">
+            Minimum {MIN_DESCRIPTION_LENGTH} characters required.
+            {descriptionRemaining > 0
+              ? ` Add ${descriptionRemaining} more characters.`
+              : " Looks clear."}
+          </p>
 
-      <ChoiceTabs
-        label="Work mode"
-        value={formData.work_mode}
-        options={WORK_MODE_OPTIONS}
-        onChange={(value) => updateField("work_mode", value)}
-      />
-
-      <ChoiceTabs
-        label="Job type"
-        value={formData.job_type}
-        options={JOB_TYPE_OPTIONS}
-        onChange={(value) => updateField("job_type", value)}
-      />
-
-      <ChoiceTabs
-        label="Publishing status"
-        value={formData.status}
-        options={STATUS_OPTIONS}
-        statusMode
-        onChange={(value) => updateField("status", value)}
-      />
-
-      <div className="grid gap-5 md:grid-cols-2">
-        <div>
-          <label className={labelClass}>Salary min</label>
-          <input
-            name="salary_min"
-            type="number"
-            min="0"
-            value={formData.salary_min}
-            onChange={handleChange}
-            onBlur={() => markTouched("salary_min")}
-            placeholder="30000"
-            className={`mt-2 ${inputClass} ${
-              visibleErrors.salary_min ? "border-red-300" : "border-slate-200"
-            }`}
-          />
-          <FieldError message={visibleErrors.salary_min} />
+          <p className="text-xs font-normal text-slate-400">
+            {descriptionLength}/{MAX_DESCRIPTION_LENGTH}
+          </p>
         </div>
 
-        <div>
-          <label className={labelClass}>Salary max</label>
-          <input
-            name="salary_max"
-            type="number"
-            min="0"
-            value={formData.salary_max}
-            onChange={handleChange}
-            onBlur={() => markTouched("salary_max")}
-            placeholder="90000"
-            className={`mt-2 ${inputClass} ${
-              visibleErrors.salary_max ? "border-red-300" : "border-slate-200"
-            }`}
-          />
-          <FieldError message={visibleErrors.salary_max} />
-        </div>
+        <FieldError message={visibleErrors.description} />
       </div>
 
       <SkillsInput
@@ -703,11 +956,20 @@ export default function RecruiterJobForm({
           markTouched("required_skills");
         }}
         error={visibleErrors.required_skills}
+        markTouched={markTouched}
       />
 
       {formErrorMessage ? (
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-normal text-red-600">
+          <FiAlertCircle className="mr-2 inline" />
           {formErrorMessage}
+        </p>
+      ) : null}
+
+      {formStatusMessage ? (
+        <p className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-normal text-green-700">
+          <FiCheckCircle className="mr-2 inline" />
+          {formStatusMessage}
         </p>
       ) : null}
 
@@ -715,7 +977,8 @@ export default function RecruiterJobForm({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-normal text-[#585958] transition hover:bg-slate-50"
+          disabled={isSubmitting}
+          className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-normal text-[#585958] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
           Cancel
         </button>
@@ -725,7 +988,7 @@ export default function RecruiterJobForm({
           disabled={isSubmitting}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#F7631E] px-6 py-3 text-sm font-medium text-white transition hover:bg-[#e85512] disabled:cursor-not-allowed disabled:bg-orange-300"
         >
-          <FiSave />
+          {isSubmitting ? <FiLoader className="animate-spin" /> : <FiSave />}
           {isSubmitting
             ? mode === "edit"
               ? "Updating..."
