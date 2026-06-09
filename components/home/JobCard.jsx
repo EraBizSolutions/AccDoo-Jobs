@@ -11,6 +11,8 @@ import {
 } from "react-icons/fi";
 import { MdVerified } from "react-icons/md";
 
+import MatchBadge from "@/components/common/MatchBadge";
+
 function getCompanyInitials(companyName = "JE") {
   return companyName
     .split(" ")
@@ -99,6 +101,8 @@ export default function JobCard({ job }) {
   const logoText = getCompanyInitials(companyName);
   const salary = formatSalary(job);
   const skills = getSkillTags(job.required_skills);
+  const hasMatchScore =
+    job.match_score !== null && job.match_score !== undefined;
 
   async function handleShareJob() {
     setShareStatus("");
@@ -154,12 +158,21 @@ export default function JobCard({ job }) {
           </Link>
 
           <div className="min-w-0">
-            <Link
-              href={jobDetailsPath}
-              className="text-[23px] font-medium leading-tight tracking-tight text-[#0C203A] transition hover:text-[#F7631E]"
-            >
-              {job.title || "Untitled role"}
-            </Link>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href={jobDetailsPath}
+                className="text-[23px] font-medium leading-tight tracking-tight text-[#0C203A] transition hover:text-[#F7631E]"
+              >
+                {job.title || "Untitled role"}
+              </Link>
+
+              {hasMatchScore ? (
+                <MatchBadge
+                  score={job.match_score}
+                  label={job.match_label}
+                />
+              ) : null}
+            </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <p className="text-[17px] font-normal text-[#2b7a66]">
@@ -171,6 +184,12 @@ export default function JobCard({ job }) {
             <p className="mt-5 text-[16px] font-normal text-[#0C203A]">
               {skills.length ? skills.join(" · ") : "Role details available"}
             </p>
+
+            {hasMatchScore && job.match_summary ? (
+              <p className="mt-3 line-clamp-2 max-w-3xl text-sm font-normal leading-6 text-slate-500">
+                {job.match_summary}
+              </p>
+            ) : null}
 
             <div className="mt-5 flex flex-wrap gap-x-7 gap-y-3">
               <JobMetaItem icon={<FiBriefcase size={18} />}>

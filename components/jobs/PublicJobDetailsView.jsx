@@ -7,6 +7,7 @@ import {
   FiAlertCircle,
   FiArrowLeft,
   FiBriefcase,
+  FiCheck,
   FiInfo,
   FiLoader,
   FiMapPin,
@@ -17,6 +18,7 @@ import {
 import { MdVerified } from "react-icons/md";
 import { LuSparkles } from "react-icons/lu";
 
+import MatchBadge from "@/components/common/MatchBadge";
 import ApplyJobModal from "@/components/candidate/ApplyJobModal";
 import Footer from "@/components/home/Footer";
 import Navbar from "@/components/home/Navbar";
@@ -41,6 +43,20 @@ function getCompanyInitials(companyName = "AD") {
     .slice(0, 2)
     .map((word) => word[0]?.toUpperCase())
     .join("");
+}
+
+function getAppBaseUrl() {
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+  if (envUrl) {
+    return envUrl.replace(/\/$/, "");
+  }
+
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+
+  return "";
 }
 
 function formatSalary(job) {
@@ -161,40 +177,31 @@ function JobSection({ title, paragraph, items }) {
   );
 }
 
-function CandidateAlignmentCard({ skills, candidateProfile, isOwnPostedJob }) {
-  const candidateMatch = useMemo(() => {
-    if (isOwnPostedJob) return 0;
-
-    if (!skills.length) return 55;
-
-    const profileSkills = String(candidateProfile?.skills || "")
-      .toLowerCase()
-      .split(",")
-      .map((skill) => skill.trim())
-      .filter(Boolean);
-
-    if (!profileSkills.length) return 50;
-
-    const matchedSkills = skills.filter((skill) =>
-      profileSkills.includes(skill.toLowerCase())
-    );
-
-    const matchPercent = Math.round((matchedSkills.length / skills.length) * 100);
-
-    return Math.min(95, Math.max(35, matchPercent));
-  }, [skills, candidateProfile, isOwnPostedJob]);
-
+function CandidateAlignmentCard({ job, skills, candidateProfile, isOwnPostedJob }) {
   const completionIssues = getCandidateProfileCompletionIssues(candidateProfile);
   const profileIsComplete =
     Boolean(candidateProfile) && completionIssues.length === 0;
+
+  const hasBackendMatch =
+    job?.match_score !== null && job?.match_score !== undefined;
+
+  const matchScore = hasBackendMatch ? Number(job.match_score) || 0 : null;
+  const matchedSkills = Array.isArray(job?.matched_skills)
+    ? job.matched_skills
+    : [];
+  const missingSkills = Array.isArray(job?.missing_skills)
+    ? job.missing_skills
+    : [];
 
   return (
     <section
       className={`rounded-3xl border p-6 ${
         isOwnPostedJob
           ? "border-slate-200 bg-slate-50"
-          : profileIsComplete
+          : profileIsComplete && hasBackendMatch
           ? "border-orange-100 bg-orange-50"
+          : profileIsComplete
+          ? "border-emerald-100 bg-emerald-50"
           : "border-yellow-200 bg-yellow-50"
       }`}
     >
@@ -203,8 +210,10 @@ function CandidateAlignmentCard({ skills, candidateProfile, isOwnPostedJob }) {
           className={`grid h-24 w-24 shrink-0 place-items-center rounded-full border-4 bg-white text-center ${
             isOwnPostedJob
               ? "border-slate-300"
-              : profileIsComplete
+              : profileIsComplete && hasBackendMatch
               ? "border-[#F7631E]"
+              : profileIsComplete
+              ? "border-emerald-500"
               : "border-yellow-400"
           }`}
         >
@@ -213,48 +222,71 @@ function CandidateAlignmentCard({ skills, candidateProfile, isOwnPostedJob }) {
               className={`text-2xl font-medium ${
                 isOwnPostedJob
                   ? "text-slate-500"
-                  : profileIsComplete
+                  : profileIsComplete && hasBackendMatch
                   ? "text-[#F7631E]"
+                  : profileIsComplete
+                  ? "text-emerald-700"
                   : "text-yellow-700"
               }`}
             >
-              {isOwnPostedJob ? "Owner" : `${candidateMatch}%`}
+              {isOwnPostedJob ? "Owner" : hasBackendMatch ? `${matchScore}%` : "Ready"}
             </p>
+
             <p
               className={`text-[10px] font-medium uppercase tracking-wide ${
                 isOwnPostedJob
                   ? "text-slate-500"
-                  : profileIsComplete
+                  : profileIsComplete && hasBackendMatch
                   ? "text-[#F7631E]"
+                  : profileIsComplete
+                  ? "text-emerald-700"
                   : "text-yellow-700"
               }`}
             >
-              {isOwnPostedJob ? "posted" : "match"}
+              {isOwnPostedJob ? "posted" : hasBackendMatch ? "match" : "profile"}
             </p>
           </div>
         </div>
 
         <div className="min-w-0">
-          <p className="flex items-center gap-2 text-lg font-medium text-[#202020]">
-            {isOwnPostedJob ? (
-              <FiInfo className="text-slate-500" />
-            ) : profileIsComplete ? (
-              <LuSparkles className="text-[#F7631E]" />
-            ) : (
-              <FiAlertCircle className="text-yellow-700" />
-            )}
-            {isOwnPostedJob
-              ? "This is your posted job"
-              : profileIsComplete
-              ? "Candidate alignment preview"
-              : "Complete profile to unlock applying"}
-          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="flex items-center gap-2 text-lg font-medium text-[#202020]">
+              {isOwnPostedJob ? (
+                <FiInfo className="text-slate-500" />
+              ) : profileIsComplete && hasBackendMatch ? (
+                <LuSparkles className="text-[#F7631E]" />
+              ) : profileIsComplete ? (
+                <LuSparkles className="text-emerald-700" />
+              ) : (
+                <FiAlertCircle className="text-yellow-700" />
+              )}
+
+              {isOwnPostedJob
+                ? "This is your posted job"
+                : profileIsComplete && hasBackendMatch
+                ? "Candidate-job match preview"
+                : profileIsComplete
+                ? "Profile ready for matching"
+                : "Complete profile to unlock applying"}
+            </p>
+
+            {!isOwnPostedJob && hasBackendMatch ? (
+              <MatchBadge
+                score={job.match_score}
+                label={job.match_label}
+                size="lg"
+              />
+            ) : null}
+          </div>
 
           <p className="mt-2 text-sm font-normal leading-6 text-[#585958]">
             {isOwnPostedJob
               ? "You are logged in as the recruiter who posted this job. You can preview it, share it, and manage applicants from the recruiter workspace, but you cannot apply to your own job."
+              : profileIsComplete && hasBackendMatch
+              ? job.match_summary ||
+                "This score is calculated by comparing your candidate skills with the job required skills from the backend."
               : profileIsComplete
-              ? "This preview uses your candidate skills against the job requirements. Backend matching will make this score stronger in the next phase."
+              ? "Your candidate profile is ready. Login as a candidate with saved skills to see live backend match scoring."
               : "You can view this job, but you must complete your candidate profile before applying."}
           </p>
 
@@ -266,7 +298,55 @@ function CandidateAlignmentCard({ skills, candidateProfile, isOwnPostedJob }) {
             </ul>
           ) : null}
 
-          {skills.length ? (
+          {!isOwnPostedJob && hasBackendMatch ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-2xl border border-white/70 bg-white px-4 py-3">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-emerald-700">
+                  Matched skills
+                </p>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {matchedSkills.length ? (
+                    matchedSkills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-normal text-emerald-700"
+                      >
+                        {skill}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs font-normal text-[#585958]">
+                      No direct matches yet
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/70 bg-white px-4 py-3">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-orange-700">
+                  Missing skills
+                </p>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {missingSkills.length ? (
+                    missingSkills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="rounded-full bg-orange-50 px-3 py-1.5 text-xs font-normal text-orange-700"
+                      >
+                        {skill}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs font-normal text-[#585958]">
+                      No missing required skills
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : skills.length ? (
             <div className="mt-4 flex flex-wrap gap-2">
               {skills.map((skill) => (
                 <span
@@ -339,6 +419,7 @@ export default function PublicJobDetailsView() {
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isPreparingApply, setIsPreparingApply] = useState(false);
+  const [shareStatus, setShareStatus] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [applyStatusMessage, setApplyStatusMessage] = useState("");
   const [applyStatusType, setApplyStatusType] = useState("error");
@@ -347,11 +428,15 @@ export default function PublicJobDetailsView() {
   const companyInitials = getCompanyInitials(companyName);
   const skills = getSkillTags(job?.required_skills);
   const sections = buildDescriptionSections(job?.description);
+  const fullJobUrl = `${getAppBaseUrl()}/jobs/${jobId}`;
 
   const isOwnPostedJob =
     Boolean(currentUser?.id) &&
     Boolean(job?.recruiter_user_id) &&
     Number(currentUser.id) === Number(job.recruiter_user_id);
+
+  const hasMatchScore =
+    job?.match_score !== null && job?.match_score !== undefined;
 
   useEffect(() => {
     const storedUser = getStoredUser();
@@ -388,6 +473,48 @@ export default function PublicJobDetailsView() {
       loadJobPageData();
     }
   }, [jobId]);
+
+  async function handleShareJob() {
+    setShareStatus("");
+
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({
+          title: job?.title || "AccDoo job opportunity",
+          text: `${job?.title || "Job opportunity"} at ${companyName}`,
+          url: fullJobUrl,
+        });
+
+        setShareStatus("Shared");
+      } else if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(fullJobUrl);
+        setShareStatus("Link copied");
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = fullJobUrl;
+        textArea.style.position = "fixed";
+        textArea.style.opacity = "0";
+
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+
+        setShareStatus("Link copied");
+      }
+
+      window.setTimeout(() => {
+        setShareStatus("");
+      }, 1800);
+    } catch {
+      setShareStatus("Copy failed");
+
+      window.setTimeout(() => {
+        setShareStatus("");
+      }, 1800);
+    }
+  }
 
   async function prepareCandidateProfile() {
     try {
@@ -529,6 +656,13 @@ export default function PublicJobDetailsView() {
                         AccDoo verified role
                       </div>
 
+                      {hasMatchScore && !isOwnPostedJob ? (
+                        <MatchBadge
+                          score={job.match_score}
+                          label={job.match_label}
+                        />
+                      ) : null}
+
                       {isOwnPostedJob ? (
                         <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
                           <FiBriefcase size={14} />
@@ -572,10 +706,15 @@ export default function PublicJobDetailsView() {
 
                   <button
                     type="button"
+                    onClick={handleShareJob}
                     className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-normal text-[#585958] transition hover:border-[#F7631E] hover:text-[#F7631E]"
                   >
-                    <FiShare2 />
-                    Share
+                    {shareStatus === "Link copied" || shareStatus === "Shared" ? (
+                      <FiCheck />
+                    ) : (
+                      <FiShare2 />
+                    )}
+                    {shareStatus || "Share"}
                   </button>
                 </div>
               </div>
@@ -592,6 +731,7 @@ export default function PublicJobDetailsView() {
             <div className="grid gap-10 py-9 lg:grid-cols-[1fr_340px]">
               <article>
                 <CandidateAlignmentCard
+                  job={job}
                   skills={skills}
                   candidateProfile={candidateProfile}
                   isOwnPostedJob={isOwnPostedJob}
@@ -668,6 +808,15 @@ export default function PublicJobDetailsView() {
                         {job.status || "active"}
                       </span>
                     </p>
+
+                    {hasMatchScore && !isOwnPostedJob ? (
+                      <p className="flex items-center justify-between gap-4">
+                        <span>Your match</span>
+                        <span className="text-right font-medium text-[#F7631E]">
+                          {job.match_score}% · {job.match_label || "Match"}
+                        </span>
+                      </p>
+                    ) : null}
 
                     <p className="flex items-center justify-between gap-4">
                       <span>Work mode</span>
@@ -748,6 +897,8 @@ export default function PublicJobDetailsView() {
                   <p className="mt-2 text-sm font-normal leading-6 text-[#585958]">
                     {isOwnPostedJob
                       ? "To test candidate application flow, logout and login with a different candidate account."
+                      : hasMatchScore
+                      ? "This match score is calculated from your saved skills and the recruiter’s required job skills."
                       : "Complete your profile before applying. A valid phone number, role, skills, and CV help recruiters review you faster."}
                   </p>
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FiCheck,
   FiEdit3,
@@ -19,6 +19,8 @@ import {
   updateRecruiterJobQuestion,
 } from "@/lib/api/recruiterApi";
 
+const MAX_QUESTIONS = 3;
+
 const QUESTION_TYPES = [
   { label: "Short answer", value: "text" },
   { label: "Long answer", value: "textarea" },
@@ -26,12 +28,77 @@ const QUESTION_TYPES = [
   { label: "URL", value: "url" },
 ];
 
+const QUESTION_ORDER_OPTIONS = [
+  { label: "1", value: 1 },
+  { label: "2", value: 2 },
+  { label: "3", value: 3 },
+];
+
+const QUESTION_TEXT_MIN_LENGTH = 10;
+const QUESTION_TEXT_MAX_LENGTH = 180;
+
+const QUESTION_TEXT_PATTERN = /^[A-Za-z0-9 ?.,]+$/;
+
 const emptyQuestionForm = {
   question_text: "",
   question_type: "text",
   is_required: true,
-  display_order: 0,
+  display_order: 1,
 };
+
+function cleanText(value) {
+  return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function sanitizeQuestionText(value) {
+  return String(value || "")
+    .replace(/[^A-Za-z0-9 ?.,]/g, "")
+    .replace(/\s+/g, " ")
+    .slice(0, QUESTION_TEXT_MAX_LENGTH);
+}
+
+function normalizeDisplayOrder(value) {
+  const numberValue = Number(value);
+
+  if (Number.isNaN(numberValue)) return 1;
+  if (numberValue < 1) return 1;
+  if (numberValue > MAX_QUESTIONS) return MAX_QUESTIONS;
+
+  return numberValue;
+}
+
+function blockUnsafeQuestionInput(event) {
+  const inputValue = event.data;
+
+  if (!inputValue) return;
+
+  if (!QUESTION_TEXT_PATTERN.test(inputValue)) {
+    event.preventDefault();
+  }
+}
+
+function handleQuestionPaste(event, onChange) {
+  event.preventDefault();
+
+  const pastedText = event.clipboardData.getData("text");
+  const cleanedText = sanitizeQuestionText(pastedText);
+
+  onChange(cleanedText);
+}
+
+function getNextDisplayOrder(questions) {
+  const usedOrders = questions
+    .map((question) => Number(question.display_order))
+    .filter((order) => order >= 1 && order <= MAX_QUESTIONS);
+
+  for (let order = 1; order <= MAX_QUESTIONS; order += 1) {
+    if (!usedOrders.includes(order)) {
+      return order;
+    }
+  }
+
+  return Math.min(questions.length + 1, MAX_QUESTIONS);
+}
 
 function QuestionTypePill({ type }) {
   const label =
@@ -53,20 +120,26 @@ function FieldError({ message }) {
 
 function validateQuestionForm(formData) {
   const errors = {};
-  const questionText = formData.question_text.trim();
+  const questionText = cleanText(formData.question_text);
+  const displayOrder = Number(formData.display_order);
 
   if (!questionText) {
     errors.question_text = "Question text is required.";
-  } else if (questionText.length < 3) {
-    errors.question_text = "Question must be at least 3 characters.";
+  } else if (questionText.length < QUESTION_TEXT_MIN_LENGTH) {
+    errors.question_text = `Question must be at least ${QUESTION_TEXT_MIN_LENGTH} characters.`;
+  } else if (questionText.length > QUESTION_TEXT_MAX_LENGTH) {
+    errors.question_text = `Question must be below ${QUESTION_TEXT_MAX_LENGTH} characters.`;
+  } else if (!QUESTION_TEXT_PATTERN.test(questionText)) {
+    errors.question_text =
+      "Use only letters, numbers, spaces, question mark, comma, and dot.";
   }
 
   if (!QUESTION_TYPES.some((type) => type.value === formData.question_type)) {
     errors.question_type = "Select a valid question type.";
   }
 
-  if (Number(formData.display_order) < 0) {
-    errors.display_order = "Display order cannot be negative.";
+  if (!QUESTION_ORDER_OPTIONS.some((order) => order.value === displayOrder)) {
+    errors.display_order = "Display order must be 1, 2, or 3.";
   }
 
   return errors;
@@ -79,15 +152,50 @@ function QuestionForm({
   onSubmit,
   onCancel,
   isSubmitting,
+  disableSubmit = false,
+  disableReason = "",
 }) {
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const errors = submitAttempted ? validateQuestionForm(formData) : {};
+  const [touched, setTouched] = useState({});
+
+  const validationErrors = useMemo(
+    () => validateQuestionForm(formData),
+    [formData]
+  );
+
+  const visibleErrors = Object.fromEntries(
+    Object.entries(validationErrors).filter(
+      ([field]) => submitAttempted || touched[field]
+    )
+  );
+
+  const questionLength = cleanText(formData.question_text).length;
+  const remainingMin = Math.max(QUESTION_TEXT_MIN_LENGTH - questionLength, 0);
+
+  function markTouched(name) {
+    setTouched((currentTouched) => ({
+      ...currentTouched,
+      [name]: true,
+    }));
+  }
 
   function updateField(name, value) {
+    let nextValue = value;
+
+    if (name === "question_text") {
+      nextValue = sanitizeQuestionText(value);
+    }
+
+    if (name === "display_order") {
+      nextValue = normalizeDisplayOrder(value);
+    }
+
     setFormData((currentData) => ({
       ...currentData,
-      [name]: value,
+      [name]: nextValue,
     }));
+
+    markTouched(name);
   }
 
   async function handleSubmit(event) {
@@ -95,20 +203,30 @@ function QuestionForm({
 
     setSubmitAttempted(true);
 
+    if (disableSubmit) {
+      return;
+    }
+
     const latestErrors = validateQuestionForm(formData);
 
     if (Object.keys(latestErrors).length > 0) {
+      setTouched({
+        question_text: true,
+        question_type: true,
+        display_order: true,
+      });
       return;
     }
 
     await onSubmit({
-      question_text: formData.question_text.trim(),
+      question_text: cleanText(formData.question_text),
       question_type: formData.question_type,
       is_required: Boolean(formData.is_required),
-      display_order: Number(formData.display_order || 0),
+      display_order: normalizeDisplayOrder(formData.display_order),
     });
 
     setSubmitAttempted(false);
+    setTouched({});
   }
 
   return (
@@ -116,26 +234,58 @@ function QuestionForm({
       onSubmit={handleSubmit}
       className="rounded-3xl border border-orange-100 bg-orange-50/60 p-5"
     >
+      {disableSubmit ? (
+        <p className="mb-4 rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm font-normal text-yellow-800">
+          {disableReason || `Maximum ${MAX_QUESTIONS} questions allowed.`}
+        </p>
+      ) : null}
+
       <div>
         <label className="text-sm font-normal text-[#585958]">
-          Question text
+          Question text <span className="text-[#F7631E]">*</span>
         </label>
+
         <textarea
           value={formData.question_text}
+          onBeforeInput={blockUnsafeQuestionInput}
+          onPaste={(event) =>
+            handleQuestionPaste(event, (nextValue) =>
+              updateField("question_text", nextValue)
+            )
+          }
           onChange={(event) => updateField("question_text", event.target.value)}
+          onBlur={() => markTouched("question_text")}
           rows={3}
+          maxLength={QUESTION_TEXT_MAX_LENGTH}
+          disabled={disableSubmit || isSubmitting}
           placeholder="Example: Why are you interested in this role?"
-          className={`mt-2 w-full resize-none rounded-2xl border bg-white px-4 py-3 text-sm font-normal text-[#202020] outline-none transition placeholder:text-slate-300 focus:border-[#F7631E] focus:ring-4 focus:ring-orange-50 ${
-            errors.question_text ? "border-red-300" : "border-slate-200"
+          className={`mt-2 w-full resize-none rounded-2xl border bg-white px-4 py-3 text-sm font-normal text-[#202020] outline-none transition placeholder:text-slate-300 focus:border-[#F7631E] focus:ring-4 focus:ring-orange-50 disabled:cursor-not-allowed disabled:bg-slate-50 ${
+            visibleErrors.question_text ? "border-red-300" : "border-slate-200"
           }`}
         />
-        <FieldError message={errors.question_text} />
+
+        <div className="mt-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs font-normal text-slate-400">
+            Only letters, numbers, spaces, question mark, comma, and dot.
+            {remainingMin > 0
+              ? ` Add ${remainingMin} more character${
+                  remainingMin === 1 ? "" : "s"
+                }.`
+              : " Looks good."}
+          </p>
+
+          <p className="text-xs font-normal text-slate-400">
+            {questionLength}/{QUESTION_TEXT_MAX_LENGTH}
+          </p>
+        </div>
+
+        <FieldError message={visibleErrors.question_text} />
       </div>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-[1fr_160px]">
+      <div className="mt-4 grid gap-4 md:grid-cols-[1fr_180px]">
         <div>
           <label className="text-sm font-normal text-[#585958]">
-            Answer type
+            Answer type <span className="text-[#F7631E]">*</span>
           </label>
 
           <div className="mt-2 grid gap-2 sm:grid-cols-4">
@@ -146,8 +296,9 @@ function QuestionForm({
                 <button
                   key={type.value}
                   type="button"
+                  disabled={disableSubmit || isSubmitting}
                   onClick={() => updateField("question_type", type.value)}
-                  className={`rounded-2xl border px-3 py-2 text-left text-xs font-normal transition ${
+                  className={`rounded-2xl border px-3 py-2 text-left text-xs font-normal transition disabled:cursor-not-allowed disabled:opacity-60 ${
                     isSelected
                       ? "border-[#F7631E] bg-white text-[#F7631E] ring-4 ring-orange-100"
                       : "border-slate-200 bg-white text-[#585958] hover:border-[#F7631E] hover:text-[#F7631E]"
@@ -162,25 +313,39 @@ function QuestionForm({
             })}
           </div>
 
-          <FieldError message={errors.question_type} />
+          <FieldError message={visibleErrors.question_type} />
         </div>
 
         <div>
           <label className="text-sm font-normal text-[#585958]">
-            Display order
+            Display order <span className="text-[#F7631E]">*</span>
           </label>
 
-          <input
-            type="number"
-            min="0"
-            value={formData.display_order}
-            onChange={(event) => updateField("display_order", event.target.value)}
-            className={`mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-sm font-normal text-[#202020] outline-none transition focus:border-[#F7631E] focus:ring-4 focus:ring-orange-50 ${
-              errors.display_order ? "border-red-300" : "border-slate-200"
+          <select
+            value={normalizeDisplayOrder(formData.display_order)}
+            disabled={disableSubmit || isSubmitting}
+            onChange={(event) =>
+              updateField("display_order", Number(event.target.value))
+            }
+            onBlur={() => markTouched("display_order")}
+            className={`mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-sm font-normal text-[#202020] outline-none transition focus:border-[#F7631E] focus:ring-4 focus:ring-orange-50 disabled:cursor-not-allowed disabled:bg-slate-50 ${
+              visibleErrors.display_order
+                ? "border-red-300"
+                : "border-slate-200"
             }`}
-          />
+          >
+            {QUESTION_ORDER_OPTIONS.map((order) => (
+              <option key={order.value} value={order.value}>
+                Question {order.label}
+              </option>
+            ))}
+          </select>
 
-          <FieldError message={errors.display_order} />
+          <p className="mt-2 text-xs font-normal text-slate-400">
+            Only 1, 2, or 3. Lower number shows first.
+          </p>
+
+          <FieldError message={visibleErrors.display_order} />
         </div>
       </div>
 
@@ -189,8 +354,9 @@ function QuestionForm({
           <input
             type="checkbox"
             checked={Boolean(formData.is_required)}
+            disabled={disableSubmit || isSubmitting}
             onChange={(event) => updateField("is_required", event.target.checked)}
-            className="h-4 w-4 accent-[#F7631E]"
+            className="h-4 w-4 accent-[#F7631E] disabled:cursor-not-allowed"
           />
           Required question
         </label>
@@ -199,7 +365,11 @@ function QuestionForm({
           {onCancel ? (
             <button
               type="button"
-              onClick={onCancel}
+              onClick={() => {
+                setSubmitAttempted(false);
+                setTouched({});
+                onCancel();
+              }}
               disabled={isSubmitting}
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-normal text-[#585958] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -210,7 +380,7 @@ function QuestionForm({
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || disableSubmit}
             className="inline-flex items-center gap-2 rounded-xl bg-[#F7631E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#e85512] disabled:cursor-not-allowed disabled:bg-orange-300"
           >
             {isSubmitting ? <FiLoader className="animate-spin" /> : <FiSave />}
@@ -239,13 +409,31 @@ export default function JobQuestionsManager({ jobId }) {
   const [errorMessage, setErrorMessage] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
 
+  const sortedQuestions = useMemo(() => {
+    return [...questions].sort(
+      (firstQuestion, secondQuestion) =>
+        Number(firstQuestion.display_order || 1) -
+        Number(secondQuestion.display_order || 1)
+    );
+  }, [questions]);
+
+  const questionLimitReached = questions.length >= MAX_QUESTIONS;
+
   async function loadQuestions() {
     setErrorMessage("");
 
     try {
       setIsLoading(true);
+
       const data = await listRecruiterJobQuestions(jobId);
-      setQuestions(Array.isArray(data) ? data : []);
+      const questionList = Array.isArray(data) ? data : [];
+
+      setQuestions(questionList);
+
+      setFormData((currentFormData) => ({
+        ...currentFormData,
+        display_order: getNextDisplayOrder(questionList),
+      }));
     } catch (error) {
       setErrorMessage(error.message || "Could not load job questions.");
     } finally {
@@ -263,10 +451,23 @@ export default function JobQuestionsManager({ jobId }) {
     setErrorMessage("");
     setStatusMessage("");
 
+    if (questions.length >= MAX_QUESTIONS) {
+      setErrorMessage(`You can add only ${MAX_QUESTIONS} questions per job.`);
+      return;
+    }
+
     try {
       setIsSubmitting(true);
+
       await createRecruiterJobQuestion(jobId, payload);
-      setFormData(emptyQuestionForm);
+
+      const nextQuestionsCount = questions.length + 1;
+
+      setFormData({
+        ...emptyQuestionForm,
+        display_order: Math.min(nextQuestionsCount + 1, MAX_QUESTIONS),
+      });
+
       setStatusMessage("Question added successfully.");
       await loadQuestions();
     } catch (error) {
@@ -282,7 +483,7 @@ export default function JobQuestionsManager({ jobId }) {
       question_text: question.question_text || "",
       question_type: question.question_type || "text",
       is_required: Boolean(question.is_required),
-      display_order: question.display_order ?? 0,
+      display_order: normalizeDisplayOrder(question.display_order || 1),
     });
   }
 
@@ -344,14 +545,14 @@ export default function JobQuestionsManager({ jobId }) {
           </h2>
 
           <p className="mt-2 max-w-2xl text-sm font-normal leading-6 text-[#585958]">
-            Add role-specific questions. Candidates will answer these inside the
-            apply popup before submitting.
+            Add up to {MAX_QUESTIONS} role-specific questions. Candidates will
+            answer these inside the apply popup before submitting.
           </p>
         </div>
 
         <div className="rounded-2xl bg-orange-50 px-4 py-3 text-center">
           <p className="text-2xl font-medium text-[#F7631E]">
-            {questions.length}
+            {questions.length}/{MAX_QUESTIONS}
           </p>
           <p className="text-xs font-normal text-[#585958]">Questions</p>
         </div>
@@ -376,6 +577,8 @@ export default function JobQuestionsManager({ jobId }) {
           setFormData={setFormData}
           onSubmit={handleCreateQuestion}
           isSubmitting={isSubmitting}
+          disableSubmit={questionLimitReached}
+          disableReason={`Maximum ${MAX_QUESTIONS} screening questions are allowed for one job.`}
         />
       </div>
 
@@ -384,8 +587,8 @@ export default function JobQuestionsManager({ jobId }) {
           <p className="rounded-2xl bg-[#F9FBFB] px-4 py-4 text-sm font-normal text-[#585958]">
             Loading questions...
           </p>
-        ) : questions.length ? (
-          questions.map((question) => {
+        ) : sortedQuestions.length ? (
+          sortedQuestions.map((question) => {
             const isEditing = editingQuestionId === question.id;
             const isBusy = busyQuestionId === question.id;
 
@@ -420,7 +623,7 @@ export default function JobQuestionsManager({ jobId }) {
                         )}
 
                         <span className="rounded-full bg-white px-3 py-1 text-xs font-normal text-slate-500">
-                          Order {question.display_order}
+                          Question {normalizeDisplayOrder(question.display_order)}
                         </span>
                       </div>
 
@@ -466,7 +669,8 @@ export default function JobQuestionsManager({ jobId }) {
               No questions yet.
             </p>
             <p className="mt-1 text-sm font-normal text-[#585958]">
-              Add a question above to make candidate screening sharper.
+              Add up to {MAX_QUESTIONS} questions above to make candidate
+              screening sharper.
             </p>
           </div>
         )}

@@ -40,18 +40,50 @@ function getJobSearchText(job) {
       job.job_type,
       job.work_mode,
       job.required_skills,
+      job.match_label,
+      job.match_summary,
     ].join(" ")
   );
 }
 
-function getSalaryValue(job) {
+function getSalaryHighValue(job) {
   return Number(job.salary_max || job.salary_min || 0);
+}
+
+function getSalaryLowValue(job) {
+  return Number(job.salary_min || job.salary_max || 0);
+}
+
+function getCreatedTime(job) {
+  if (job.created_at) {
+    const createdTime = new Date(job.created_at).getTime();
+
+    if (!Number.isNaN(createdTime)) {
+      return createdTime;
+    }
+  }
+
+  return Number(job.id || 0);
+}
+
+function getMatchScore(job) {
+  if (job.match_score === null || job.match_score === undefined) {
+    return null;
+  }
+
+  const score = Number(job.match_score);
+
+  if (Number.isNaN(score)) {
+    return null;
+  }
+
+  return Math.max(0, Math.min(100, score));
 }
 
 function matchesSalaryRange(job, range) {
   if (!range) return true;
 
-  const salary = getSalaryValue(job);
+  const salary = getSalaryHighValue(job);
 
   if (!salary) return false;
 
@@ -113,64 +145,120 @@ function filterJobs(jobs, filters) {
   });
 }
 
-function getRecommendedScore(job, isLoggedIn) {
-  const text = getJobSearchText(job);
-  let score = 0;
+function sortByRecommended(jobs) {
+  return jobs.sort((a, b) => {
+    const aMatchScore = getMatchScore(a);
+    const bMatchScore = getMatchScore(b);
 
-  if (isLoggedIn) score += 20;
-  if (text.includes("frontend")) score += 8;
-  if (text.includes("react")) score += 8;
-  if (text.includes("next")) score += 6;
-  if (text.includes("javascript")) score += 6;
-  if (text.includes("intern")) score += 4;
-  if (text.includes("developer")) score += 4;
-  if (job.status === "active") score += 4;
+    const aHasMatch = aMatchScore !== null;
+    const bHasMatch = bMatchScore !== null;
 
-  score += Math.min(getSalaryValue(job) / 20000, 10);
+    if (aHasMatch && bHasMatch && bMatchScore !== aMatchScore) {
+      return bMatchScore - aMatchScore;
+    }
 
-  return score;
+    if (aHasMatch && !bHasMatch) {
+      return -1;
+    }
+
+    if (!aHasMatch && bHasMatch) {
+      return 1;
+    }
+
+    return getCreatedTime(b) - getCreatedTime(a);
+  });
 }
 
-function sortJobs(jobs, sortMode, isLoggedIn) {
+function sortByPopular(jobs) {
+  return jobs.sort((a, b) => {
+    const aMatchScore = getMatchScore(a) || 0;
+    const bMatchScore = getMatchScore(b) || 0;
+
+    const aText = getJobSearchText(a);
+    const bText = getJobSearchText(b);
+
+    const aPopularScore =
+      aMatchScore * 0.7 +
+      (aText.includes("software") ? 8 : 0) +
+      (aText.includes("developer") ? 8 : 0) +
+      (aText.includes("engineer") ? 8 : 0) +
+      (aText.includes("remote") ? 5 : 0) +
+      (aText.includes("internship") ? 4 : 0);
+
+    const bPopularScore =
+      bMatchScore * 0.7 +
+      (bText.includes("software") ? 8 : 0) +
+      (bText.includes("developer") ? 8 : 0) +
+      (bText.includes("engineer") ? 8 : 0) +
+      (bText.includes("remote") ? 5 : 0) +
+      (bText.includes("internship") ? 4 : 0);
+
+    if (bPopularScore !== aPopularScore) {
+      return bPopularScore - aPopularScore;
+    }
+
+    return getCreatedTime(b) - getCreatedTime(a);
+  });
+}
+
+function sortJobs(jobs, sortMode) {
   const clonedJobs = [...jobs];
 
+  if (sortMode === "recommended") {
+    return sortByRecommended(clonedJobs);
+  }
+
   if (sortMode === "latest") {
-    return clonedJobs.sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+    return clonedJobs.sort((a, b) => getCreatedTime(b) - getCreatedTime(a));
   }
 
   if (sortMode === "popular") {
-    return clonedJobs.sort((a, b) => {
-      const aText = getJobSearchText(a);
-      const bText = getJobSearchText(b);
-
-      const aScore =
-        (aText.includes("software") ? 8 : 0) +
-        (aText.includes("developer") ? 8 : 0) +
-        (aText.includes("engineer") ? 8 : 0) +
-        (aText.includes("remote") ? 5 : 0);
-
-      const bScore =
-        (bText.includes("software") ? 8 : 0) +
-        (bText.includes("developer") ? 8 : 0) +
-        (bText.includes("engineer") ? 8 : 0) +
-        (bText.includes("remote") ? 5 : 0);
-
-      return bScore - aScore;
-    });
+    return sortByPopular(clonedJobs);
   }
 
   if (sortMode === "salary-high") {
-    return clonedJobs.sort((a, b) => getSalaryValue(b) - getSalaryValue(a));
+    return clonedJobs.sort((a, b) => {
+      const salaryDifference = getSalaryHighValue(b) - getSalaryHighValue(a);
+
+      if (salaryDifference !== 0) {
+        return salaryDifference;
+      }
+
+      return getCreatedTime(b) - getCreatedTime(a);
+    });
   }
 
   if (sortMode === "salary-low") {
-    return clonedJobs.sort((a, b) => getSalaryValue(a) - getSalaryValue(b));
+    return clonedJobs.sort((a, b) => {
+      const aSalary = getSalaryLowValue(a);
+      const bSalary = getSalaryLowValue(b);
+
+      if (!aSalary && bSalary) return 1;
+      if (aSalary && !bSalary) return -1;
+
+      const salaryDifference = aSalary - bSalary;
+
+      if (salaryDifference !== 0) {
+        return salaryDifference;
+      }
+
+      return getCreatedTime(b) - getCreatedTime(a);
+    });
   }
 
-  return clonedJobs.sort(
-    (a, b) =>
-      getRecommendedScore(b, isLoggedIn) - getRecommendedScore(a, isLoggedIn)
-  );
+  return sortByRecommended(clonedJobs);
+}
+
+function getRecommendedCopy(isLoggedIn, hasMatchScores) {
+  if (isLoggedIn && hasMatchScores) {
+    return "Recommended roles ranked by your saved skills and backend match score.";
+  }
+
+  if (isLoggedIn) {
+    return "Recommended active roles based on your profile and search filters.";
+  }
+
+  return "Explore active roles from trusted companies. Login to unlock better matches.";
 }
 
 export default function JobsList() {
@@ -204,6 +292,17 @@ export default function JobsList() {
 
     setCurrentUser(storedUser);
     loadJobs();
+
+    function handleAuthUpdate() {
+      setCurrentUser(getStoredUser());
+      loadJobs();
+    }
+
+    window.addEventListener("jobsera:auth-updated", handleAuthUpdate);
+
+    return () => {
+      window.removeEventListener("jobsera:auth-updated", handleAuthUpdate);
+    };
   }, []);
 
   useEffect(() => {
@@ -228,11 +327,15 @@ export default function JobsList() {
 
   const isLoggedIn = Boolean(currentUser);
 
+  const hasMatchScores = useMemo(() => {
+    return jobs.some((job) => getMatchScore(job) !== null);
+  }, [jobs]);
+
   const filteredJobs = useMemo(() => filterJobs(jobs, filters), [jobs, filters]);
 
   const sortedJobs = useMemo(
-    () => sortJobs(filteredJobs, sortMode, isLoggedIn),
-    [filteredJobs, sortMode, isLoggedIn]
+    () => sortJobs(filteredJobs, sortMode),
+    [filteredJobs, sortMode]
   );
 
   const visibleJobs = sortedJobs.slice(0, visibleCount);
@@ -258,9 +361,7 @@ export default function JobsList() {
             </h2>
 
             <p className="mt-2 text-[15px] font-normal text-[#585958]">
-              {isLoggedIn
-                ? "Recommended active roles based on your profile and search filters."
-                : "Explore active roles from trusted companies. Login to unlock better matches."}
+              {getRecommendedCopy(isLoggedIn, hasMatchScores)}
             </p>
           </div>
 
