@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import {
   FiBriefcase,
-  FiDollarSign,
   FiEdit3,
   FiEye,
   FiFileText,
@@ -13,9 +12,7 @@ import {
   FiLoader,
   FiMapPin,
   FiRefreshCw,
-  FiSettings,
   FiTrash2,
-  FiUsers,
 } from "react-icons/fi";
 
 import JobQuestionsManager from "@/components/recruiter/JobQuestionsManager";
@@ -107,6 +104,14 @@ function DetailItem({ icon, label, value }) {
   );
 }
 
+function SalaryBadge() {
+  return (
+    <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-semibold text-[#F7631E]">
+      LKR
+    </span>
+  );
+}
+
 function JobDetailsTab({ job, applicationsCount }) {
   const skills = getSkills(job.required_skills);
 
@@ -144,9 +149,7 @@ function JobDetailsTab({ job, applicationsCount }) {
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#F7631E]">
             ATS
           </p>
-          <p className="mt-3 text-2xl font-semibold text-[#0F172A]">
-            Ready
-          </p>
+          <p className="mt-3 text-2xl font-semibold text-[#0F172A]">Ready</p>
         </div>
       </div>
 
@@ -184,26 +187,31 @@ function JobDetailsTab({ job, applicationsCount }) {
             label="Company"
             value={job.company_name || "Company not added"}
           />
+
           <DetailItem
             icon={<FiMapPin />}
             label="Location"
             value={job.location || "Location not added"}
           />
+
           <DetailItem
             icon={<FiFileText />}
             label="Work mode"
             value={formatValue(job.work_mode)}
           />
+
           <DetailItem
-            icon={<FiDollarSign />}
+            icon={<SalaryBadge />}
             label="Salary"
             value={formatSalary(job)}
           />
+
           <DetailItem
             icon={<FiFileText />}
             label="Created"
             value={formatDate(job.created_at)}
           />
+
           <DetailItem
             icon={<FiEye />}
             label="Public preview"

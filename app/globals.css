@@ -14,3 +14,12 @@ body {
   color: #0f172a;
   font-family: Inter, Arial, Helvetica, sans-serif;
 }
+
+html,
+body {
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
