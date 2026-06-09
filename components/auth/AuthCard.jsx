@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
+import AuthEmailField from "@/components/auth/AuthEmailField";
+import AuthNameField from "@/components/auth/AuthNameField";
+import AuthPasswordField from "@/components/auth/AuthPasswordField";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import {
   activateCandidate,
@@ -12,6 +15,12 @@ import {
   registerCandidate,
 } from "@/lib/api/authApi";
 import { startLinkedInAuth } from "@/lib/utils/linkedinOAuth";
+import {
+  getEmailValidationError,
+  getNameValidationError,
+  getPasswordValidationError,
+  sanitizeEmail,
+} from "@/lib/utils/authValidationRules";
 import { setSelectedLoginMode } from "@/lib/utils/tokenStorage";
 
 function BriefcaseIcon() {
@@ -92,12 +101,50 @@ export default function AuthCard() {
 
   const [selectedRole, setSelectedRole] = useState("candidate");
   const [formData, setFormData] = useState(initialFormData);
+  const [touched, setTouched] = useState({
+    name: false,
+    email: false,
+    password: false,
+    confirmPassword: false,
+  });
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isCandidateSelected = selectedRole === "candidate";
   const isRecruiterSelected = selectedRole === "recruiter";
+
+  const validationErrors = useMemo(() => {
+    return {
+      name: getNameValidationError(formData.name),
+      email: getEmailValidationError(formData.email),
+      password: getPasswordValidationError(formData.password),
+      confirmPassword: !formData.confirmPassword
+        ? "Confirm password is required."
+        : formData.password !== formData.confirmPassword
+        ? "Password and confirm password do not match."
+        : "",
+    };
+  }, [formData]);
+
+  const visibleErrors = {
+    name: touched.name || submitAttempted ? validationErrors.name : "",
+    email: touched.email || submitAttempted ? validationErrors.email : "",
+    password:
+      touched.password || submitAttempted ? validationErrors.password : "",
+    confirmPassword:
+      touched.confirmPassword || submitAttempted
+        ? validationErrors.confirmPassword
+        : "",
+  };
+
+  function markTouched(fieldName) {
+    setTouched((currentTouched) => ({
+      ...currentTouched,
+      [fieldName]: true,
+    }));
+  }
 
   function handleRoleChange(role) {
     setSelectedRole(role);
@@ -106,27 +153,52 @@ export default function AuthCard() {
     setStatusMessage("");
   }
 
-  function handleChange(event) {
-    const { name, value } = event.target;
-
+  function handleNameChange(value) {
     setFormData((currentData) => ({
       ...currentData,
-      [name]: value,
+      name: value,
     }));
+
+    setErrorMessage("");
+    markTouched("name");
   }
 
-  function validateForm() {
-    if (
-      !formData.name.trim() ||
-      !formData.email.trim() ||
-      !formData.password ||
-      !formData.confirmPassword
-    ) {
-      return "Please fill in all required fields.";
-    }
+  function handleEmailChange(value) {
+    setFormData((currentData) => ({
+      ...currentData,
+      email: sanitizeEmail(value),
+    }));
 
-    if (formData.password !== formData.confirmPassword) {
-      return "Password and confirm password do not match.";
+    setErrorMessage("");
+    markTouched("email");
+  }
+
+  function handlePasswordChange(event) {
+    setFormData((currentData) => ({
+      ...currentData,
+      password: event.target.value,
+    }));
+
+    setErrorMessage("");
+    markTouched("password");
+  }
+
+  function handleConfirmPasswordChange(event) {
+    setFormData((currentData) => ({
+      ...currentData,
+      confirmPassword: event.target.value,
+    }));
+
+    setErrorMessage("");
+    markTouched("confirmPassword");
+  }
+
+  function getFormValidationMessage() {
+    if (validationErrors.name) return validationErrors.name;
+    if (validationErrors.email) return validationErrors.email;
+    if (validationErrors.password) return validationErrors.password;
+    if (validationErrors.confirmPassword) {
+      return validationErrors.confirmPassword;
     }
 
     return "";
@@ -152,13 +224,21 @@ export default function AuthCard() {
   async function handleSubmit(event) {
     event.preventDefault();
 
+    setSubmitAttempted(true);
     setErrorMessage("");
     setStatusMessage("");
 
-    const validationError = validateForm();
+    const validationMessage = getFormValidationMessage();
 
-    if (validationError) {
-      setErrorMessage(validationError);
+    if (validationMessage) {
+      setTouched({
+        name: true,
+        email: true,
+        password: true,
+        confirmPassword: true,
+      });
+
+      setErrorMessage(validationMessage);
       return;
     }
 
@@ -167,7 +247,7 @@ export default function AuthCard() {
       setSelectedLoginMode(selectedRole);
 
       await registerCandidate({
-        name: formData.name,
+        name: formData.name.trim().replace(/\s+/g, " "),
         email: formData.email,
         password: formData.password,
       });
@@ -260,7 +340,8 @@ export default function AuthCard() {
             <button
               type="button"
               onClick={() => handleRoleChange("candidate")}
-              className={`group rounded-2xl border px-3 py-4 transition ${
+              disabled={isSubmitting}
+              className={`group rounded-2xl border px-3 py-4 transition disabled:cursor-not-allowed disabled:opacity-70 ${
                 isCandidateSelected
                   ? "border-[#F7631E] bg-orange-50"
                   : "border-slate-200 bg-white hover:border-[#F7631E]"
@@ -286,7 +367,8 @@ export default function AuthCard() {
             <button
               type="button"
               onClick={() => handleRoleChange("recruiter")}
-              className={`group rounded-2xl border px-3 py-4 transition ${
+              disabled={isSubmitting}
+              className={`group rounded-2xl border px-3 py-4 transition disabled:cursor-not-allowed disabled:opacity-70 ${
                 isRecruiterSelected
                   ? "border-[#F7631E] bg-orange-50"
                   : "border-slate-200 bg-white hover:border-[#F7631E]"
@@ -311,53 +393,38 @@ export default function AuthCard() {
           </div>
 
           <form onSubmit={handleSubmit} className="mt-5 space-y-3 text-left">
-            <input
-              name="name"
-              type="text"
+            <AuthNameField
               value={formData.name}
-              onChange={handleChange}
-              placeholder="Full name"
-              autoComplete="name"
-              disabled={isSubmitting}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-normal text-[#202020] outline-none transition placeholder:text-slate-300 focus:border-[#F7631E] disabled:cursor-not-allowed disabled:bg-slate-100"
+              onChange={handleNameChange}
+              onBlur={() => markTouched("name")}
+              error={visibleErrors.name}
             />
 
-            <input
-              name="email"
-              type="email"
+            <AuthEmailField
               value={formData.email}
-              onChange={handleChange}
-              placeholder="Email address"
-              autoComplete="email"
-              disabled={isSubmitting}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-normal text-[#202020] outline-none transition placeholder:text-slate-300 focus:border-[#F7631E] disabled:cursor-not-allowed disabled:bg-slate-100"
+              onChange={handleEmailChange}
+              onBlur={() => markTouched("email")}
+              error={visibleErrors.email}
             />
 
-            <input
-              name="password"
-              type="password"
+            <AuthPasswordField
+              label="Password"
               value={formData.password}
-              onChange={handleChange}
+              onChange={handlePasswordChange}
+              onBlur={() => markTouched("password")}
+              error={visibleErrors.password}
+              showStrength
               placeholder="Password e.g. Password@123"
-              autoComplete="new-password"
-              disabled={isSubmitting}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-normal text-[#202020] outline-none transition placeholder:text-slate-300 focus:border-[#F7631E] disabled:cursor-not-allowed disabled:bg-slate-100"
             />
 
-            <input
-              name="confirmPassword"
-              type="password"
+            <AuthPasswordField
+              label="Confirm password"
               value={formData.confirmPassword}
-              onChange={handleChange}
-              placeholder="Confirm password"
-              autoComplete="new-password"
-              disabled={isSubmitting}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-normal text-[#202020] outline-none transition placeholder:text-slate-300 focus:border-[#F7631E] disabled:cursor-not-allowed disabled:bg-slate-100"
+              onChange={handleConfirmPasswordChange}
+              onBlur={() => markTouched("confirmPassword")}
+              error={visibleErrors.confirmPassword}
+              placeholder="Re-enter your password"
             />
-
-            <p className="text-[11px] font-normal leading-5 text-slate-400">
-              Use 8+ characters with uppercase, lowercase, number, and symbol.
-            </p>
 
             {errorMessage ? (
               <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-center text-[12px] font-normal text-red-600">
@@ -386,11 +453,11 @@ export default function AuthCard() {
           </form>
 
           <div className="my-4 flex items-center gap-3">
-            <div className="h-22x flex-1 bg-slate-200" />
+            <div className="h-px flex-1 bg-slate-200" />
             <span className="text-[9px] font-normal uppercase tracking-[0.18em] text-slate-300">
               Sign up with
             </span>
-            <div className="h-22x flex-1 bg-slate-200" />
+            <div className="h-px flex-1 bg-slate-200" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -413,7 +480,7 @@ export default function AuthCard() {
             </button>
           </div>
 
-          <div className="my-4 h-22x bg-slate-200" />
+          <div className="my-4 h-px bg-slate-200" />
 
           <p className="text-[12px] font-normal leading-5 text-[#585958]">
             {isRecruiterSelected

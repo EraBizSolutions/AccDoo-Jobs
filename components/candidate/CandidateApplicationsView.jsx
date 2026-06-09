@@ -17,6 +17,7 @@ import {
 } from "react-icons/fi";
 import { LuSparkles } from "react-icons/lu";
 
+import SecureCvButton from "@/components/common/SecureCvButton";
 import Footer from "@/components/home/Footer";
 import Navbar from "@/components/home/Navbar";
 import { listMyCandidateApplications } from "@/lib/api/applicationsApi";
@@ -214,6 +215,7 @@ function ApplicationCard({ application }) {
   const job = application.job || {};
   const status = application.status || "applied";
   const progressPercent = getProgressPercent(status);
+  const cvVersion = `${application.id}-${application.updated_at || application.applied_at || ""}`;
 
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/50 transition hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-slate-200/70">
@@ -263,16 +265,12 @@ function ApplicationCard({ application }) {
 
         <div className="flex flex-wrap gap-2">
           {application.cv_url ? (
-            <a
-              href={application.cv_url}
-              target="_blank"
-              rel="noreferrer"
+            <SecureCvButton
+              cvUrl={application.cv_url}
+              version={cvVersion}
+              label="View CV"
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-normal text-[#585958] transition hover:border-[#F7631E] hover:text-[#F7631E]"
-            >
-              <FiFileText />
-              CV
-              <FiExternalLink size={14} />
-            </a>
+            />
           ) : null}
 
           {job.id ? (
@@ -281,6 +279,7 @@ function ApplicationCard({ application }) {
               className="inline-flex items-center gap-2 rounded-xl bg-[#F7631E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#e85512]"
             >
               View job
+              <FiExternalLink size={14} />
             </Link>
           ) : null}
         </div>
@@ -476,4 +475,4 @@ export default function CandidateApplicationsView() {
       <Footer />
     </main>
   );
-}
+}   

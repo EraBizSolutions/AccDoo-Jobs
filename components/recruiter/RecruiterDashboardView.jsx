@@ -37,9 +37,12 @@ const RANGE_OPTIONS = [
 ];
 
 const PIPELINE_KEYS = [
+  { key: "applied", label: "Applied", color: "#2E8D76" },
   { key: "screening", label: "Screening", color: "#F7C85D" },
   { key: "qualified", label: "Qualified", color: "#B877C8" },
+  { key: "screening_disqualified", label: "Screening Disqualified", color: "#94A3B8" },
   { key: "interview", label: "Interviews", color: "#6BC7E8" },
+  { key: "shortlisted", label: "Shortlisted", color: "#38BDF8" },
   { key: "offer", label: "Offer", color: "#F6A273" },
   { key: "hired", label: "Hired", color: "#8CBFAE" },
   { key: "offer_declined", label: "Offer Declined", color: "#EF4444" },

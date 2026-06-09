@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   FiBriefcase,
-  FiExternalLink,
   FiFileText,
   FiFilter,
   FiLoader,
@@ -14,6 +13,7 @@ import {
   FiUsers,
 } from "react-icons/fi";
 
+import SecureCvButton from "@/components/common/SecureCvButton";
 import RecruiterShell from "@/components/recruiter/RecruiterShell";
 import {
   listRecruiterApplications,
@@ -82,22 +82,36 @@ function formatDate(dateValue) {
   }
 }
 
+function getCandidateName(candidate) {
+  return candidate?.name || "Candidate";
+}
+
+function getCandidateInitial(candidate) {
+  const name = getCandidateName(candidate);
+  return name.trim().charAt(0).toUpperCase() || "C";
+}
+
+function getCandidateCvUrl(application) {
+  return application?.candidate?.cv_url || application?.cv_url || "";
+}
+
 function CandidateCard({ application, isBusy, onMoveStatus }) {
-  const candidate = application.candidate || {};
-  const job = application.job || {};
+  const candidate = application?.candidate || {};
+  const job = application?.job || {};
+  const cvUrl = getCandidateCvUrl(application);
 
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-200/50">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-        <div className="flex gap-4">
-          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#EAF5F1] text-[#2E8D76]">
-            <FiUser size={20} />
+        <div className="flex min-w-0 gap-4">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#EAF5F1] text-lg font-semibold text-[#2E8D76]">
+            {getCandidateInitial(candidate)}
           </div>
 
-          <div>
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-semibold text-[#0F172A]">
-                {candidate.name || "Candidate"}
+              <h2 className="truncate text-lg font-semibold text-[#0F172A]">
+                {getCandidateName(candidate)}
               </h2>
 
               <span
@@ -109,7 +123,7 @@ function CandidateCard({ application, isBusy, onMoveStatus }) {
               </span>
             </div>
 
-            <p className="mt-1 text-sm font-normal text-[#667085]">
+            <p className="mt-1 break-all text-sm font-normal text-[#667085]">
               {candidate.email || "Email not available"}
             </p>
 
@@ -138,18 +152,23 @@ function CandidateCard({ application, isBusy, onMoveStatus }) {
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#98A2B3]">
               Applied for
             </p>
+
             <p className="mt-1 text-sm font-semibold text-[#0F172A]">
               {job.title || "Job not available"}
             </p>
+
             <p className="mt-1 text-xs font-normal text-[#667085]">
-              {job.company_name || "Company"} · {formatDate(application.applied_at)}
+              {job.company_name || "Company"} ·{" "}
+              {formatDate(application.applied_at)}
             </p>
           </div>
 
           <select
-            value={application.status}
+            value={application.status || "applied"}
             disabled={isBusy}
-            onChange={(event) => onMoveStatus(application.id, event.target.value)}
+            onChange={(event) =>
+              onMoveStatus(application.id, event.target.value)
+            }
             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-normal text-[#0F172A] outline-none transition focus:border-[#2E8D76] focus:ring-4 focus:ring-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {MOVE_STATUS_OPTIONS.map((option) => (
@@ -168,18 +187,18 @@ function CandidateCard({ application, isBusy, onMoveStatus }) {
       ) : null}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {application.cv_url ? (
-          <a
-            href={application.cv_url}
-            target="_blank"
-            rel="noreferrer"
+        {cvUrl ? (
+          <SecureCvButton
+            cvUrl={cvUrl}
+            label="View CV"
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-normal text-[#667085] transition hover:border-[#2E8D76] hover:text-[#2E8D76]"
-          >
+          />
+        ) : (
+          <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-normal text-slate-400">
             <FiFileText />
-            View CV
-            <FiExternalLink size={13} />
-          </a>
-        ) : null}
+            CV not attached
+          </span>
+        )}
 
         {job.id ? (
           <Link
@@ -225,7 +244,9 @@ export default function RecruiterCandidatesView() {
 
     try {
       setIsLoading(true);
+
       const data = await listRecruiterApplications();
+
       setApplications(Array.isArray(data) ? data : []);
 
       if (showSuccessMessage) {
@@ -245,6 +266,11 @@ export default function RecruiterCandidatesView() {
   async function handleMoveStatus(applicationId, nextStatus) {
     setErrorMessage("");
     setStatusMessage("");
+
+    if (!applicationId || !nextStatus) {
+      setErrorMessage("Application or status is missing.");
+      return;
+    }
 
     try {
       setBusyApplicationId(applicationId);
@@ -267,19 +293,28 @@ export default function RecruiterCandidatesView() {
     const lowerSearch = searchTerm.toLowerCase().trim();
 
     return applications.filter((application) => {
-      const candidate = application.candidate || {};
-      const job = application.job || {};
+      const candidate = application?.candidate || {};
+      const job = application?.job || {};
 
       const matchesStatus =
         activeStatus === "all" || application.status === activeStatus;
 
+      const searchableText = [
+        candidate.name,
+        candidate.email,
+        candidate.skills,
+        candidate.current_role,
+        candidate.location,
+        job.title,
+        job.company_name,
+        application.status,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
       const matchesSearch =
-        !lowerSearch ||
-        candidate.name?.toLowerCase().includes(lowerSearch) ||
-        candidate.email?.toLowerCase().includes(lowerSearch) ||
-        candidate.skills?.toLowerCase().includes(lowerSearch) ||
-        job.title?.toLowerCase().includes(lowerSearch) ||
-        job.company_name?.toLowerCase().includes(lowerSearch);
+        !lowerSearch || searchableText.includes(lowerSearch);
 
       return matchesStatus && matchesSearch;
     });
@@ -293,11 +328,13 @@ export default function RecruiterCandidatesView() {
       },
       {
         label: "Screening",
-        value: applications.filter((item) => item.status === "screening").length,
+        value: applications.filter((item) => item.status === "screening")
+          .length,
       },
       {
         label: "Interviews",
-        value: applications.filter((item) => item.status === "interview").length,
+        value: applications.filter((item) => item.status === "interview")
+          .length,
       },
       {
         label: "Hired",
@@ -321,7 +358,7 @@ export default function RecruiterCandidatesView() {
 
             <p className="mt-3 max-w-3xl text-sm font-normal leading-6 text-[#667085]">
               Manage every applicant across your jobs, update ATS status, and
-              jump into job workspaces or pipelines.
+              open candidate CVs through the secure preview flow.
             </p>
           </div>
 
@@ -329,7 +366,7 @@ export default function RecruiterCandidatesView() {
             type="button"
             onClick={() => loadApplications({ showSuccessMessage: true })}
             disabled={isLoading}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-normal text-[#667085] shadow-sm transition hover:border-[#2E8D76] hover:text-[#2E8D76] disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-normal text-[#667085] shadow-sm transition hover:border-[#2E8D76] hover:text-[#2E8D76] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? <FiLoader className="animate-spin" /> : <FiRefreshCw />}
             Refresh
@@ -345,6 +382,7 @@ export default function RecruiterCandidatesView() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#98A2B3]">
                 {stat.label}
               </p>
+
               <p className="mt-3 text-3xl font-semibold text-[#0F172A]">
                 {isLoading ? "..." : stat.value}
               </p>
@@ -356,6 +394,7 @@ export default function RecruiterCandidatesView() {
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="relative w-full xl:max-w-sm">
               <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+
               <input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
@@ -419,9 +458,11 @@ export default function RecruiterCandidatesView() {
               <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#EAF5F1] text-[#2E8D76]">
                 <FiUsers size={26} />
               </div>
+
               <p className="mt-5 text-base font-semibold text-[#0F172A]">
                 No candidates found.
               </p>
+
               <p className="mx-auto mt-2 max-w-xl text-sm font-normal leading-6 text-[#667085]">
                 Candidate applications will appear here after users apply to your
                 active jobs.

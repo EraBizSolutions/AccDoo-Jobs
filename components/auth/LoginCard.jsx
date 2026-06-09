@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import AuthEmailField from "@/components/auth/AuthEmailField";
+import AuthPasswordField from "@/components/auth/AuthPasswordField";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import {
   activateCandidate,
@@ -13,6 +15,10 @@ import {
 } from "@/lib/api/authApi";
 import { getMyRecruiterProfile } from "@/lib/api/recruiterApi";
 import { startLinkedInAuth } from "@/lib/utils/linkedinOAuth";
+import {
+  getEmailValidationError,
+  sanitizeEmail,
+} from "@/lib/utils/authValidationRules";
 import {
   getSelectedLoginMode,
   setSelectedLoginMode,
@@ -92,12 +98,31 @@ export default function LoginCard() {
     password: "",
   });
 
+  const [touched, setTouched] = useState({
+    email: false,
+    password: false,
+  });
+
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isCandidateSelected = selectedMode === "candidate";
   const isRecruiterSelected = selectedMode === "recruiter";
+
+  const validationErrors = useMemo(() => {
+    return {
+      email: getEmailValidationError(formData.email),
+      password: formData.password ? "" : "Password is required.",
+    };
+  }, [formData]);
+
+  const visibleErrors = {
+    email: touched.email || submitAttempted ? validationErrors.email : "",
+    password:
+      touched.password || submitAttempted ? validationErrors.password : "",
+  };
 
   useEffect(() => {
     const savedMode = getSelectedLoginMode();
@@ -111,13 +136,38 @@ export default function LoginCard() {
     setStatusMessage("");
   }
 
-  function handleChange(event) {
-    const { name, value } = event.target;
+  function markTouched(fieldName) {
+    setTouched((currentTouched) => ({
+      ...currentTouched,
+      [fieldName]: true,
+    }));
+  }
 
+  function handleEmailChange(value) {
     setFormData((currentData) => ({
       ...currentData,
-      [name]: value,
+      email: sanitizeEmail(value),
     }));
+
+    setErrorMessage("");
+    markTouched("email");
+  }
+
+  function handlePasswordChange(event) {
+    setFormData((currentData) => ({
+      ...currentData,
+      password: event.target.value,
+    }));
+
+    setErrorMessage("");
+    markTouched("password");
+  }
+
+  function getFormValidationMessage() {
+    if (validationErrors.email) return validationErrors.email;
+    if (validationErrors.password) return validationErrors.password;
+
+    return "";
   }
 
   async function redirectAfterLogin(mode) {
@@ -135,12 +185,17 @@ export default function LoginCard() {
     }
 
     try {
-      await getMyCandidateProfile();
+      const profile = await getMyCandidateProfile();
+
+      if (profile?.cv_url) {
+        router.push("/");
+        return;
+      }
     } catch {
       try {
         await activateCandidate();
       } catch {
-        // Candidate page handles unavailable profile state.
+        // Candidate setup pages handle this state.
       }
     }
 
@@ -150,11 +205,19 @@ export default function LoginCard() {
   async function handleSubmit(event) {
     event.preventDefault();
 
+    setSubmitAttempted(true);
     setErrorMessage("");
     setStatusMessage("");
 
-    if (!formData.email || !formData.password) {
-      setErrorMessage("Please enter your email and password.");
+    const validationMessage = getFormValidationMessage();
+
+    if (validationMessage) {
+      setTouched({
+        email: true,
+        password: true,
+      });
+
+      setErrorMessage(validationMessage);
       return;
     }
 
@@ -227,7 +290,8 @@ export default function LoginCard() {
             <button
               type="button"
               onClick={() => changeMode("candidate")}
-              className={`rounded-2xl border px-3 py-4 text-center transition ${
+              disabled={isSubmitting}
+              className={`rounded-2xl border px-3 py-4 text-center transition disabled:cursor-not-allowed disabled:opacity-70 ${
                 isCandidateSelected
                   ? "border-[#F7631E] bg-orange-50 text-[#F7631E]"
                   : "border-slate-200 bg-white text-[#202020] hover:border-[#F7631E]"
@@ -235,7 +299,9 @@ export default function LoginCard() {
             >
               <div
                 className={`mx-auto grid h-10 w-10 place-items-center rounded-full ${
-                  isCandidateSelected ? "bg-[#F7631E] text-white" : "bg-slate-100"
+                  isCandidateSelected
+                    ? "bg-[#F7631E] text-white"
+                    : "bg-slate-100"
                 }`}
               >
                 <UserIcon />
@@ -249,7 +315,8 @@ export default function LoginCard() {
             <button
               type="button"
               onClick={() => changeMode("recruiter")}
-              className={`rounded-2xl border px-3 py-4 text-center transition ${
+              disabled={isSubmitting}
+              className={`rounded-2xl border px-3 py-4 text-center transition disabled:cursor-not-allowed disabled:opacity-70 ${
                 isRecruiterSelected
                   ? "border-[#F7631E] bg-orange-50 text-[#F7631E]"
                   : "border-slate-200 bg-white text-[#202020] hover:border-[#F7631E]"
@@ -257,7 +324,9 @@ export default function LoginCard() {
             >
               <div
                 className={`mx-auto grid h-10 w-10 place-items-center rounded-full ${
-                  isRecruiterSelected ? "bg-[#F7631E] text-white" : "bg-slate-100"
+                  isRecruiterSelected
+                    ? "bg-[#F7631E] text-white"
+                    : "bg-slate-100"
                 }`}
               >
                 <BriefcaseIcon />
@@ -270,24 +339,20 @@ export default function LoginCard() {
           </div>
 
           <form onSubmit={handleSubmit} className="mt-5 space-y-3 text-left">
-            <input
-              name="email"
-              type="email"
+            <AuthEmailField
               value={formData.email}
-              onChange={handleChange}
-              placeholder="Email address"
-              autoComplete="email"
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-normal text-[#202020] outline-none transition placeholder:text-slate-300 focus:border-[#F7631E]"
+              onChange={handleEmailChange}
+              onBlur={() => markTouched("email")}
+              error={visibleErrors.email}
             />
 
-            <input
-              name="password"
-              type="password"
+            <AuthPasswordField
+              label="Password"
               value={formData.password}
-              onChange={handleChange}
-              placeholder="Password"
-              autoComplete="current-password"
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-normal text-[#202020] outline-none transition placeholder:text-slate-300 focus:border-[#F7631E]"
+              onChange={handlePasswordChange}
+              onBlur={() => markTouched("password")}
+              error={visibleErrors.password}
+              placeholder="Enter your password"
             />
 
             {errorMessage ? (
@@ -313,11 +378,11 @@ export default function LoginCard() {
           </form>
 
           <div className="my-4 flex items-center gap-3">
-            <div className="h-22x flex-1 bg-slate-200" />
+            <div className="h-px flex-1 bg-slate-200" />
             <span className="text-[9px] font-normal uppercase tracking-[0.18em] text-slate-300">
               or continue with
             </span>
-            <div className="h-22x flex-1 bg-slate-200" />
+            <div className="h-px flex-1 bg-slate-200" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -341,7 +406,7 @@ export default function LoginCard() {
             </button>
           </div>
 
-          <div className="my-4 h-22x bg-slate-200" />
+          <div className="my-4 h-px bg-slate-200" />
 
           <p className="text-[12px] font-normal leading-5 text-[#585958]">
             {isRecruiterSelected

@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  FiAlertCircle,
+  FiArrowLeft,
   FiBriefcase,
+  FiCheckCircle,
   FiGlobe,
+  FiLoader,
   FiMapPin,
   FiPhone,
   FiSave,
 } from "react-icons/fi";
+import { LuSparkles } from "react-icons/lu";
 
 import Navbar from "@/components/home/Navbar";
 import {
@@ -18,7 +23,7 @@ import {
 } from "@/lib/api/recruiterApi";
 import { getAccessToken } from "@/lib/utils/tokenStorage";
 
-const GOOGLE_MAPS_SCRIPT_ID = "jobsera-google-maps-places-script";
+const GOOGLE_MAPS_SCRIPT_ID = "accdoo-google-maps-places-script";
 
 const initialFormData = {
   company_name: "",
@@ -32,10 +37,89 @@ const inputClass =
 
 const labelClass = "text-sm font-normal text-[#585958]";
 
+function RequiredMark() {
+  return <span className="text-[#F7631E]">*</span>;
+}
+
+function FieldError({ message }) {
+  if (!message) return null;
+
+  return <p className="mt-2 text-xs font-normal text-red-500">{message}</p>;
+}
+
+function cleanText(value) {
+  return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function normalizePhoneNumber(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 10);
+}
+
+function sanitizeCompanyName(value) {
+  return String(value || "")
+    .replace(/[^A-Za-z0-9 .&()-]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function sanitizeLocation(value) {
+  return String(value || "")
+    .replace(/[^A-Za-z0-9 ,./-]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function sanitizeWebsite(value) {
+  return String(value || "")
+    .replace(/\s/g, "")
+    .replace(/[^A-Za-z0-9.:/?#&=_+-]/g, "");
+}
+
+function validateRecruiterProfile(formData) {
+  const errors = {};
+  const companyName = cleanText(formData.company_name);
+  const location = cleanText(formData.company_location);
+  const phone = normalizePhoneNumber(formData.contact_phone);
+  const website = cleanText(formData.company_website);
+
+  if (!companyName) {
+    errors.company_name = "Company name is required.";
+  } else if (companyName.length < 2) {
+    errors.company_name = "Company name must be at least 2 characters.";
+  } else if (!/^[A-Za-z0-9 .&()-]+$/.test(companyName)) {
+    errors.company_name =
+      "Company name can use only letters, numbers, spaces, dot, &, hyphen, or brackets.";
+  }
+
+  if (website) {
+    const websitePattern =
+      /^(https?:\/\/)?([A-Za-z0-9-]+\.)+[A-Za-z]{2,}(\/.*)?$/;
+
+    if (!websitePattern.test(website)) {
+      errors.company_website =
+        "Enter a valid website. Example: https://example.com";
+    }
+  }
+
+  if (!location) {
+    errors.company_location = "Company location is required.";
+  } else if (!/^[A-Za-z0-9 ,./-]+$/.test(location)) {
+    errors.company_location =
+      "Location can use only letters, numbers, spaces, comma, dot, slash, or hyphen.";
+  }
+
+  if (!phone) {
+    errors.contact_phone = "Contact number is required.";
+  } else if (!/^0[0-9]{9}$/.test(phone)) {
+    errors.contact_phone =
+      "Enter a valid 10-digit mobile number. Example: 0701234000";
+  }
+
+  return errors;
+}
+
 function injectGooglePlacesDropdownStyles() {
   if (typeof document === "undefined") return;
 
-  const styleId = "jobsera-google-places-style";
+  const styleId = "accdoo-google-places-style";
 
   if (document.getElementById(styleId)) return;
 
@@ -113,104 +197,60 @@ function loadGoogleMapsScript(apiKey) {
   });
 }
 
-function FieldError({ message }) {
-  if (!message) return null;
-
-  return <p className="mt-2 text-xs font-normal text-red-500">{message}</p>;
-}
-
-function validateRecruiterProfile(formData) {
-  const errors = {};
-
-  const companyName = formData.company_name.trim();
-  const companyWebsite = formData.company_website.trim();
-  const companyLocation = formData.company_location.trim();
-  const contactPhone = formData.contact_phone.trim();
-
-  if (!companyName) {
-    errors.company_name = "Company name is required.";
-  } else if (companyName.length < 2) {
-    errors.company_name = "Company name must be at least 2 characters.";
-  }
-
-  if (companyWebsite) {
-    const websitePattern =
-      /^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?$/i;
-
-    if (!websitePattern.test(companyWebsite)) {
-      errors.company_website = "Enter a valid website URL.";
-    }
-  }
-
-  if (!companyLocation) {
-    errors.company_location = "Company location is required.";
-  }
-
-  if (contactPhone) {
-    const phonePattern = /^\+?[0-9\s-]{7,15}$/;
-
-    if (!phonePattern.test(contactPhone)) {
-      errors.contact_phone = "Enter a valid phone number.";
-    }
-  }
-
-  return errors;
-}
-
-function normalizeWebsiteUrl(website) {
-  const cleanWebsite = website.trim();
-
-  if (!cleanWebsite) return "";
-
-  if (cleanWebsite.startsWith("http://") || cleanWebsite.startsWith("https://")) {
-    return cleanWebsite;
-  }
-
-  return `https://${cleanWebsite}`;
-}
-
 export default function RecruiterProfilePage() {
   const router = useRouter();
   const locationInputRef = useRef(null);
   const autocompleteRef = useRef(null);
 
   const [formData, setFormData] = useState(initialFormData);
-  const [hasProfile, setHasProfile] = useState(false);
   const [touched, setTouched] = useState({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [profileExists, setProfileExists] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLocationLoading, setIsLocationLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [locationError, setLocationError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  useEffect(() => {
-    async function loadProfile() {
-      if (!getAccessToken()) {
-        router.push("/login");
-        return;
-      }
+  const validationErrors = validateRecruiterProfile(formData);
 
-      try {
-        const profile = await getMyRecruiterProfile();
+  const visibleErrors = Object.fromEntries(
+    Object.entries(validationErrors).filter(
+      ([field]) => touched[field] || submitAttempted
+    )
+  );
 
-        setHasProfile(true);
-        setFormData({
-          company_name: profile.company_name || "",
-          company_website: profile.company_website || "",
-          company_location: profile.company_location || "",
-          contact_phone: profile.contact_phone || "",
-        });
-      } catch {
-        setHasProfile(false);
-      } finally {
-        setIsLoading(false);
-      }
+  async function loadRecruiterProfile() {
+    if (!getAccessToken()) {
+      router.push("/login");
+      return;
     }
 
-    loadProfile();
-  }, [router]);
+    setErrorMessage("");
+
+    try {
+      setIsLoading(true);
+
+      const profile = await getMyRecruiterProfile();
+
+      setProfileExists(true);
+      setFormData({
+        company_name: profile.company_name || "",
+        company_website: profile.company_website || "",
+        company_location: profile.company_location || "",
+        contact_phone: profile.contact_phone || "",
+      });
+    } catch {
+      setProfileExists(false);
+      setFormData(initialFormData);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadRecruiterProfile();
+  }, []);
 
   useEffect(() => {
     if (isLoading) return;
@@ -220,7 +260,9 @@ export default function RecruiterProfilePage() {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
     if (!apiKey) {
-      setLocationError("Location autocomplete is not configured.");
+      setLocationError(
+        "Google Maps key is missing. You can still type location manually."
+      );
       return;
     }
 
@@ -228,23 +270,29 @@ export default function RecruiterProfilePage() {
 
     async function initializeGooglePlaces() {
       try {
-        setIsLocationLoading(true);
-
         await loadGoogleMapsScript(apiKey);
 
-        if (!isMounted || !locationInputRef.current || !window.google?.maps?.places) {
-          setLocationError("Location autocomplete could not load.");
+        if (
+          !isMounted ||
+          !locationInputRef.current ||
+          !window.google?.maps?.places
+        ) {
+          setLocationError(
+            "Location autocomplete could not load. You can type manually."
+          );
           return;
         }
 
         if (autocompleteRef.current && window.google?.maps?.event) {
-          window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
+          window.google.maps.event.clearInstanceListeners(
+            autocompleteRef.current
+          );
         }
 
         autocompleteRef.current = new window.google.maps.places.Autocomplete(
           locationInputRef.current,
           {
-            types: ["(cities)"],
+            types: ["geocode"],
             componentRestrictions: { country: "lk" },
             fields: ["formatted_address", "name"],
           }
@@ -261,7 +309,7 @@ export default function RecruiterProfilePage() {
 
           setFormData((currentData) => ({
             ...currentData,
-            company_location: selectedLocation,
+            company_location: sanitizeLocation(selectedLocation),
           }));
 
           setTouched((currentTouched) => ({
@@ -274,9 +322,7 @@ export default function RecruiterProfilePage() {
 
         setLocationError("");
       } catch {
-        setLocationError("Location autocomplete failed to load.");
-      } finally {
-        setIsLocationLoading(false);
+        setLocationError("Location autocomplete failed. You can type manually.");
       }
     }
 
@@ -291,78 +337,89 @@ export default function RecruiterProfilePage() {
     };
   }, [isLoading]);
 
-  const validationErrors = useMemo(
-    () => validateRecruiterProfile(formData),
-    [formData]
-  );
-
-  const visibleErrors = Object.fromEntries(
-    Object.entries(validationErrors).filter(
-      ([field]) => touched[field] || submitAttempted
-    )
-  );
-
-  function markTouched(name) {
+  function markTouched(fieldName) {
     setTouched((currentTouched) => ({
       ...currentTouched,
-      [name]: true,
+      [fieldName]: true,
     }));
   }
 
   function handleChange(event) {
     const { name, value } = event.target;
+    let nextValue = value;
+
+    if (name === "company_name") {
+      nextValue = sanitizeCompanyName(value);
+    }
+
+    if (name === "company_website") {
+      nextValue = sanitizeWebsite(value);
+    }
+
+    if (name === "company_location") {
+      nextValue = sanitizeLocation(value);
+      setLocationError("");
+    }
+
+    if (name === "contact_phone") {
+      nextValue = normalizePhoneNumber(value);
+    }
 
     setFormData((currentData) => ({
       ...currentData,
-      [name]: value,
+      [name]: nextValue,
     }));
 
     markTouched(name);
-
-    if (name === "company_location") {
-      setLocationError("");
-    }
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
 
     setSubmitAttempted(true);
-    setErrorMessage("");
     setStatusMessage("");
+    setErrorMessage("");
 
     const latestErrors = validateRecruiterProfile(formData);
 
     if (Object.keys(latestErrors).length > 0) {
+      setTouched({
+        company_name: true,
+        company_website: true,
+        company_location: true,
+        contact_phone: true,
+      });
+
       setErrorMessage("Please fix the highlighted fields before saving.");
       return;
     }
 
+    const payload = {
+      company_name: cleanText(formData.company_name),
+      company_website: cleanText(formData.company_website) || null,
+      company_location: cleanText(formData.company_location),
+      contact_phone: normalizePhoneNumber(formData.contact_phone),
+    };
+
     try {
-      setIsSubmitting(true);
+      setIsSaving(true);
 
-      const payload = {
-        company_name: formData.company_name.trim(),
-        company_website: normalizeWebsiteUrl(formData.company_website),
-        company_location: formData.company_location.trim(),
-        contact_phone: formData.contact_phone.trim(),
-      };
-
-      if (hasProfile) {
+      if (profileExists) {
         await updateMyRecruiterProfile(payload);
+        setStatusMessage("Company profile updated successfully.");
       } else {
         await activateRecruiterProfile(payload);
+        setProfileExists(true);
+        setStatusMessage("Company profile created successfully.");
       }
-
-      setStatusMessage("Company profile saved. Redirecting to dashboard...");
 
       setTimeout(() => {
         router.push("/recruiter/dashboard");
       }, 700);
     } catch (error) {
-      setErrorMessage(error.message || "Could not save recruiter profile.");
+      setErrorMessage(error.message || "Could not save company profile.");
     } finally {
-      setIsSubmitting(false);
+      setIsSaving(false);
     }
   }
 
@@ -370,142 +427,221 @@ export default function RecruiterProfilePage() {
     <main className="min-h-screen bg-[#F9FBFB] font-sans">
       <Navbar />
 
-      <section className="mx-auto max-w-5xl px-5 py-10">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-200/70 md:p-8">
-          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-            <div>
-              <p className="text-sm font-normal uppercase tracking-[0.22em] text-[#F7631E]">
-                Recruiter setup
-              </p>
+      <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-5 lg:px-8">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="mb-6 inline-flex items-center gap-2 text-sm font-normal text-[#F7631E] transition hover:text-[#e85512]"
+        >
+          <FiArrowLeft />
+          Back
+        </button>
 
-              <h1 className="mt-2 text-[34px] font-medium tracking-tight text-[#202020]">
-                Company information
-              </h1>
+        <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
+          <aside className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60">
+            <div className="grid h-20 w-20 place-items-center rounded-3xl bg-[#F7631E] text-white shadow-sm">
+              <FiBriefcase size={34} />
+            </div>
+
+            <p className="mt-6 text-sm font-normal uppercase tracking-[0.22em] text-[#F7631E]">
+              Recruiter profile
+            </p>
+
+            <h1 className="mt-2 text-[30px] font-medium tracking-tight text-[#202020]">
+              Company setup
+            </h1>
+
+            <p className="mt-3 text-sm font-normal leading-6 text-[#585958]">
+              Complete your company profile before posting and managing jobs.
+            </p>
+
+            <div className="mt-7 space-y-3 rounded-3xl bg-[#F9FBFB] p-4">
+              <div className="flex items-start gap-3">
+                <LuSparkles className="mt-1 shrink-0 text-[#F7631E]" />
+                <p className="text-xs font-normal leading-5 text-[#585958]">
+                  Company name, location, and contact number are required for
+                  recruiter workspace access.
+                </p>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <FiMapPin className="mt-1 shrink-0 text-[#F7631E]" />
+                <p className="text-xs font-normal leading-5 text-[#585958]">
+                  Location search uses Google Maps autocomplete when your API key
+                  is configured.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => router.push("/recruiter/dashboard")}
+              className="mt-5 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-normal text-[#585958] transition hover:border-[#F7631E] hover:text-[#F7631E]"
+            >
+              Go to dashboard
+            </button>
+          </aside>
+
+          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/60 md:p-8">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-3 py-1 text-xs font-normal text-[#F7631E]">
+                <LuSparkles size={14} />
+                Recruiter workspace
+              </div>
+
+              <h2 className="mt-5 text-[30px] font-medium tracking-tight text-[#202020] md:text-[38px]">
+                {profileExists ? "Edit company profile" : "Create company profile"}
+              </h2>
 
               <p className="mt-3 max-w-2xl text-sm font-normal leading-6 text-[#585958]">
-                Add company details before publishing jobs. This profile connects your hiring workspace with recruiter job posts.
+                Required fields are marked with orange stars. This information
+                appears in your job posts and recruiter dashboard.
               </p>
             </div>
 
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-orange-50 text-[#F7631E]">
-              <FiBriefcase size={22} />
-            </div>
-          </div>
+            {isLoading ? (
+              <p className="mt-6 rounded-xl border border-orange-100 bg-orange-50 px-4 py-3 text-sm font-normal text-[#F7631E]">
+                Loading recruiter profile...
+              </p>
+            ) : (
+              <form onSubmit={handleSubmit} className="mt-7 space-y-6">
+                <div className="grid gap-5 md:grid-cols-2">
+                  <div>
+                    <label className={labelClass}>
+                      Company name <RequiredMark />
+                    </label>
 
-          {isLoading ? (
-            <p className="mt-6 rounded-xl border border-orange-100 bg-orange-50 px-4 py-3 text-sm font-normal text-[#F7631E]">
-              Loading recruiter profile...
-            </p>
-          ) : (
-            <form onSubmit={handleSubmit} className="mt-7 space-y-6">
-              <div>
-                <label className={labelClass}>Company name</label>
-                <input
-                  name="company_name"
-                  value={formData.company_name}
-                  onChange={handleChange}
-                  onBlur={() => markTouched("company_name")}
-                  placeholder="Erabiz Private Limited"
-                  className={`mt-2 ${inputClass} ${
-                    visibleErrors.company_name ? "border-red-300" : "border-slate-200"
-                  }`}
-                />
-                <FieldError message={visibleErrors.company_name} />
-              </div>
+                    <div className="relative mt-2">
+                      <FiBriefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        name="company_name"
+                        value={formData.company_name}
+                        onChange={handleChange}
+                        onBlur={() => markTouched("company_name")}
+                        placeholder="AccDoo Technologies"
+                        className={`${inputClass} pl-11 ${
+                          visibleErrors.company_name
+                            ? "border-red-300"
+                            : "border-slate-200"
+                        }`}
+                      />
+                    </div>
 
-              <div>
-                <label className={labelClass}>Company website</label>
-                <div className="relative mt-2">
-                  <FiGlobe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    name="company_website"
-                    value={formData.company_website}
-                    onChange={handleChange}
-                    onBlur={() => markTouched("company_website")}
-                    placeholder="https://erabiz.io"
-                    className={`${inputClass} pl-11 ${
-                      visibleErrors.company_website
-                        ? "border-red-300"
-                        : "border-slate-200"
-                    }`}
-                  />
+                    <FieldError message={visibleErrors.company_name} />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Company website</label>
+
+                    <div className="relative mt-2">
+                      <FiGlobe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        name="company_website"
+                        value={formData.company_website}
+                        onChange={handleChange}
+                        onBlur={() => markTouched("company_website")}
+                        placeholder="https://example.com"
+                        className={`${inputClass} pl-11 ${
+                          visibleErrors.company_website
+                            ? "border-red-300"
+                            : "border-slate-200"
+                        }`}
+                      />
+                    </div>
+
+                    <FieldError message={visibleErrors.company_website} />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Company location <RequiredMark />
+                    </label>
+
+                    <div className="relative mt-2">
+                      <FiMapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        ref={locationInputRef}
+                        name="company_location"
+                        value={formData.company_location}
+                        onChange={handleChange}
+                        onBlur={() => markTouched("company_location")}
+                        placeholder="Colombo, Sri Lanka"
+                        autoComplete="off"
+                        className={`${inputClass} pl-11 ${
+                          visibleErrors.company_location || locationError
+                            ? "border-red-300"
+                            : "border-slate-200"
+                        }`}
+                      />
+                    </div>
+
+                    <FieldError
+                      message={visibleErrors.company_location || locationError}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Contact number <RequiredMark />
+                    </label>
+
+                    <div className="relative mt-2">
+                      <FiPhone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        name="contact_phone"
+                        value={formData.contact_phone}
+                        onChange={handleChange}
+                        onBlur={() => markTouched("contact_phone")}
+                        placeholder="0701234000"
+                        inputMode="numeric"
+                        maxLength={10}
+                        className={`${inputClass} pl-11 ${
+                          visibleErrors.contact_phone
+                            ? "border-red-300"
+                            : "border-slate-200"
+                        }`}
+                      />
+                    </div>
+
+                    <FieldError message={visibleErrors.contact_phone} />
+                  </div>
                 </div>
-                <FieldError message={visibleErrors.company_website} />
-              </div>
 
-              <div>
-                <label className={labelClass}>Company location</label>
-                <div className="relative mt-2">
-                  <FiMapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    ref={locationInputRef}
-                    name="company_location"
-                    value={formData.company_location}
-                    onChange={handleChange}
-                    onBlur={() => markTouched("company_location")}
-                    placeholder="Colombo, Sri Lanka"
-                    autoComplete="off"
-                    className={`${inputClass} pl-11 ${
-                      visibleErrors.company_location || locationError
-                        ? "border-red-300"
-                        : "border-slate-200"
-                    }`}
-                  />
-                </div>
-
-                <FieldError
-                  message={visibleErrors.company_location || locationError}
-                />
-
-                {isLocationLoading ? (
-                  <p className="mt-2 text-xs font-normal text-slate-400">
-                    Loading location autocomplete...
+                {errorMessage ? (
+                  <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-normal text-red-600">
+                    <FiAlertCircle className="mr-2 inline" />
+                    {errorMessage}
                   </p>
                 ) : null}
-              </div>
 
-              <div>
-                <label className={labelClass}>Contact phone</label>
-                <div className="relative mt-2">
-                  <FiPhone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    name="contact_phone"
-                    value={formData.contact_phone}
-                    onChange={handleChange}
-                    onBlur={() => markTouched("contact_phone")}
-                    placeholder="+94770000000"
-                    className={`${inputClass} pl-11 ${
-                      visibleErrors.contact_phone
-                        ? "border-red-300"
-                        : "border-slate-200"
-                    }`}
-                  />
+                {statusMessage ? (
+                  <p className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-normal text-green-700">
+                    <FiCheckCircle className="mr-2 inline" />
+                    {statusMessage}
+                  </p>
+                ) : null}
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => router.push("/recruiter/dashboard")}
+                    className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-normal text-[#585958] transition hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#F7631E] px-6 py-3 text-sm font-medium text-white transition hover:bg-[#e85512] disabled:cursor-not-allowed disabled:bg-orange-300"
+                  >
+                    {isSaving ? <FiLoader className="animate-spin" /> : <FiSave />}
+                    {isSaving ? "Saving..." : "Save company profile"}
+                  </button>
                 </div>
-                <FieldError message={visibleErrors.contact_phone} />
-              </div>
-
-              {errorMessage ? (
-                <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-normal text-red-600">
-                  {errorMessage}
-                </p>
-              ) : null}
-
-              {statusMessage ? (
-                <p className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-normal text-green-700">
-                  {statusMessage}
-                </p>
-              ) : null}
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#F7631E] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#e85512] disabled:cursor-not-allowed disabled:bg-orange-300"
-              >
-                <FiSave />
-                {isSubmitting ? "Saving..." : "Save and continue"}
-              </button>
-            </form>
-          )}
+              </form>
+            )}
+          </section>
         </div>
       </section>
     </main>
