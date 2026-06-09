@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import {
   FiBriefcase,
-  FiExternalLink,
-  FiFileText,
+  FiCheckCircle,
+  FiHelpCircle,
   FiLoader,
   FiRefreshCw,
   FiUser,
 } from "react-icons/fi";
 
+import SecureCvButton from "@/components/common/SecureCvButton";
 import {
   listRecruiterJobApplications,
   updateRecruiterApplicationStatus,
@@ -76,6 +77,7 @@ function CandidateInfo({ candidate }) {
         <p className="text-base font-medium text-[#202020]">
           {candidate?.name || "Candidate name not available"}
         </p>
+
         <p className="mt-1 text-sm font-normal text-[#585958]">
           {candidate?.email || "Email not available"}
         </p>
@@ -106,6 +108,85 @@ function CandidateInfo({ candidate }) {
   );
 }
 
+function MatchInfo({ application }) {
+  const hasMatch =
+    application?.match_score !== null && application?.match_score !== undefined;
+
+  if (!hasMatch) return null;
+
+  return (
+    <div className="mt-4 rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm font-medium text-[#202020]">
+          Match score{" "}
+          <span className="text-[#F7631E]">{application.match_score}%</span>
+        </p>
+
+        {application.match_label ? (
+          <span className="rounded-full bg-white px-3 py-1 text-xs font-normal text-[#F7631E]">
+            {application.match_label}
+          </span>
+        ) : null}
+      </div>
+
+      {application.match_summary ? (
+        <p className="mt-2 text-xs font-normal leading-5 text-[#585958]">
+          {application.match_summary}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function ScreeningAnswers({ answers }) {
+  const safeAnswers = Array.isArray(answers) ? answers : [];
+
+  if (!safeAnswers.length) {
+    return (
+      <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-4">
+        <p className="flex items-center gap-2 text-sm font-medium text-[#202020]">
+          <FiHelpCircle className="text-[#F7631E]" />
+          Screening answers
+        </p>
+
+        <p className="mt-2 text-xs font-normal leading-5 text-[#585958]">
+          No screening answers were submitted for this application.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-4">
+      <p className="flex items-center gap-2 text-sm font-medium text-[#202020]">
+        <FiCheckCircle className="text-emerald-600" />
+        Screening answers
+      </p>
+
+      <div className="mt-4 space-y-3">
+        {safeAnswers.map((answer, index) => (
+          <div
+            key={`${answer.question_id}-${index}`}
+            className="rounded-2xl bg-[#F9FBFB] px-4 py-3"
+          >
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#F7631E]">
+              Question {index + 1}
+            </p>
+
+            <p className="mt-2 text-sm font-medium leading-6 text-[#202020]">
+              {answer.question_text || `Question ID ${answer.question_id}`}
+            </p>
+
+            <p className="mt-2 rounded-xl bg-white px-3 py-2 text-sm font-normal leading-6 text-[#585958]">
+              {answer.answer_text || "No answer provided."}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function RecruiterJobApplicationsPanel({ jobId }) {
   const [applications, setApplications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -119,6 +200,7 @@ export default function RecruiterJobApplicationsPanel({ jobId }) {
 
     try {
       setIsLoading(true);
+
       const data = await listRecruiterJobApplications(jobId);
       setApplications(Array.isArray(data) ? data : []);
 
@@ -138,7 +220,7 @@ export default function RecruiterJobApplicationsPanel({ jobId }) {
     }
   }, [jobId]);
 
-  async function handleStatusChange(applicationId, status) {
+  async function handleStatusChange(applicationId, nextStatus) {
     setErrorMessage("");
     setStatusMessage("");
 
@@ -146,8 +228,8 @@ export default function RecruiterJobApplicationsPanel({ jobId }) {
       setBusyApplicationId(applicationId);
 
       await updateRecruiterApplicationStatus(applicationId, {
-        status,
-        note: `Moved to ${status} from recruiter job detail page.`,
+        status: nextStatus,
+        note: `Moved to ${nextStatus} from recruiter job detail page.`,
       });
 
       setStatusMessage("Candidate status updated successfully.");
@@ -173,7 +255,8 @@ export default function RecruiterJobApplicationsPanel({ jobId }) {
           </h2>
 
           <p className="mt-2 max-w-2xl text-sm font-normal leading-6 text-[#585958]">
-            Review candidates who applied and move them through the hiring stages.
+            Review candidates, read their screening answers, and move them
+            through the hiring stages.
           </p>
         </div>
 
@@ -209,6 +292,13 @@ export default function RecruiterJobApplicationsPanel({ jobId }) {
           applications.map((application) => {
             const candidate = application.candidate || {};
             const isBusy = busyApplicationId === application.id;
+            const cvVersion = `${application.id}-${
+              application.updated_at ||
+              application.applied_at ||
+              candidate.cv_url ||
+              application.cv_url ||
+              Date.now()
+            }`;
 
             return (
               <article
@@ -248,24 +338,24 @@ export default function RecruiterJobApplicationsPanel({ jobId }) {
                   </div>
                 </div>
 
+                <MatchInfo application={application} />
+
                 {application.cover_note ? (
                   <p className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm font-normal leading-6 text-[#585958]">
                     {application.cover_note}
                   </p>
                 ) : null}
 
+                <ScreeningAnswers answers={application.answers} />
+
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {application.cv_url ? (
-                    <a
-                      href={application.cv_url}
-                      target="_blank"
-                      rel="noreferrer"
+                  {application.cv_url || candidate?.cv_url ? (
+                    <SecureCvButton
+                      cvUrl={application.cv_url || candidate.cv_url}
+                      version={cvVersion}
+                      label="View CV"
                       className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-normal text-[#585958] transition hover:border-[#F7631E] hover:text-[#F7631E]"
-                    >
-                      <FiFileText />
-                      View CV
-                      <FiExternalLink size={13} />
-                    </a>
+                    />
                   ) : null}
 
                   {candidate?.skills ? (
@@ -282,9 +372,11 @@ export default function RecruiterJobApplicationsPanel({ jobId }) {
             <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-orange-50 text-[#F7631E]">
               <FiUser size={24} />
             </div>
+
             <p className="mt-4 text-base font-medium text-[#202020]">
               No candidates yet.
             </p>
+
             <p className="mt-2 text-sm font-normal leading-6 text-[#585958]">
               When candidates apply, they will appear here and inside your ATS
               pipeline.

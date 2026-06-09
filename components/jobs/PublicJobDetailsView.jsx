@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   FiAlertCircle,
@@ -93,44 +93,130 @@ function getSkillTags(requiredSkills) {
     .filter(Boolean);
 }
 
+function cleanDescriptionLine(line) {
+  return String(line || "")
+    .trim()
+    .replace(/^[-•*]\s*/, "")
+    .trim();
+}
+
+function isHeadingLine(line) {
+  const cleanedLine = cleanDescriptionLine(line);
+
+  if (!cleanedLine) return false;
+
+  const lowerLine = cleanedLine.toLowerCase();
+
+  const knownHeadings = [
+    "key responsibilities",
+    "responsibilities",
+    "main responsibilities",
+    "job responsibilities",
+    "required skills",
+    "skills required",
+    "skills",
+    "requirements",
+    "job requirements",
+    "candidate requirements",
+    "qualifications",
+    "education",
+    "experience",
+    "role overview",
+    "about the role",
+    "job description",
+    "benefits",
+    "working hours",
+    "salary",
+    "location",
+    "what you will do",
+    "what you'll do",
+    "duties",
+    "daily duties",
+  ];
+
+  if (knownHeadings.includes(lowerLine)) {
+    return true;
+  }
+
+  if (cleanedLine.endsWith(":")) {
+    return true;
+  }
+
+  return false;
+}
+
 function buildDescriptionSections(description) {
-  if (!description) {
+  if (!description || !String(description).trim()) {
     return [
       {
         title: "About the role",
-        items: [
-          "This role is open for candidates who are ready to work with a growing team.",
-          "The recruiter has shared the key job details through AccDoo.",
-          "Apply after reviewing the role, location, and required skills.",
-        ],
+        paragraph:
+          "The recruiter has not added a detailed job description yet. Please review the quick facts and required skills before applying.",
+        items: [],
       },
     ];
   }
 
-  const lines = description
+  const lines = String(description)
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
 
-  if (lines.length <= 1) {
-    return [
-      {
-        title: "About the role",
-        paragraph: description,
-      },
-    ];
+  const sections = [];
+  let currentSection = {
+    title: "About the role",
+    paragraph: "",
+    items: [],
+  };
+
+  lines.forEach((line) => {
+    const cleanedLine = cleanDescriptionLine(line);
+
+    if (!cleanedLine) return;
+
+    if (isHeadingLine(cleanedLine)) {
+      const hasContent =
+        currentSection.paragraph.trim() || currentSection.items.length > 0;
+
+      if (hasContent) {
+        sections.push(currentSection);
+      }
+
+      currentSection = {
+        title: cleanedLine.replace(/:$/, ""),
+        paragraph: "",
+        items: [],
+      };
+
+      return;
+    }
+
+    if (!currentSection.paragraph && currentSection.title === "About the role") {
+      currentSection.paragraph = cleanedLine;
+      return;
+    }
+
+    currentSection.items.push(cleanedLine);
+  });
+
+  const hasLastContent =
+    currentSection.paragraph.trim() || currentSection.items.length > 0;
+
+  if (hasLastContent) {
+    sections.push(currentSection);
   }
 
-  return [
-    {
-      title: "About the role",
-      paragraph: lines[0],
-    },
-    {
-      title: "What you’ll do",
-      items: lines.slice(1, 8),
-    },
-  ];
+  return sections.length
+    ? sections
+    : [
+        {
+          title: "About the role",
+          paragraph: String(description).trim(),
+          items: [],
+        },
+      ];
 }
 
 function DetailMeta({ icon, children }) {
@@ -154,6 +240,8 @@ function SalaryMeta({ children }) {
 }
 
 function JobSection({ title, paragraph, items }) {
+  const safeItems = Array.isArray(items) ? items : [];
+
   return (
     <section className="mt-7">
       <h2 className="text-[24px] font-medium tracking-tight text-[#202020]">
@@ -161,15 +249,15 @@ function JobSection({ title, paragraph, items }) {
       </h2>
 
       {paragraph ? (
-        <p className="mt-3 max-w-4xl text-[15px] font-normal leading-7 text-[#202020]">
+        <p className="mt-3 max-w-4xl whitespace-pre-line text-[15px] font-normal leading-7 text-[#202020]">
           {paragraph}
         </p>
       ) : null}
 
-      {items?.length ? (
+      {safeItems.length ? (
         <ul className="mt-3 list-disc space-y-2 pl-6 text-[15px] font-normal leading-7 text-[#585958]">
-          {items.map((item) => (
-            <li key={item}>{item}</li>
+          {safeItems.map((item, index) => (
+            <li key={`${title}-${index}`}>{item}</li>
           ))}
         </ul>
       ) : null}
@@ -737,24 +825,14 @@ export default function PublicJobDetailsView() {
                   isOwnPostedJob={isOwnPostedJob}
                 />
 
-                {sections.map((section) => (
+                {sections.map((section, index) => (
                   <JobSection
-                    key={section.title}
+                    key={`${section.title}-${index}`}
                     title={section.title}
                     paragraph={section.paragraph}
                     items={section.items}
                   />
                 ))}
-
-                <JobSection
-                  title="What we’re looking for"
-                  items={[
-                    "Clear communication and a professional work attitude.",
-                    "Ability to understand requirements and complete assigned tasks.",
-                    "Relevant skills or experience connected to this role.",
-                    "Willingness to learn, improve, and work with the team.",
-                  ]}
-                />
 
                 {skills.length ? (
                   <section className="mt-7">

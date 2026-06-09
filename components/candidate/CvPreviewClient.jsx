@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -20,6 +19,21 @@ function decodeParamValue(value) {
     return decodeURIComponent(value);
   } catch {
     return value;
+  }
+}
+
+function buildNoCacheUrl(url, version) {
+  if (!url) return "";
+
+  const cacheKey = version || Date.now();
+
+  try {
+    const parsedUrl = new URL(url);
+    parsedUrl.searchParams.set("_cv_cache", String(cacheKey));
+    return parsedUrl.toString();
+  } catch {
+    const separator = url.includes("?") ? "&" : "?";
+    return `${url}${separator}_cv_cache=${cacheKey}`;
   }
 }
 
@@ -64,10 +78,15 @@ export default function CvPreviewClient() {
       }
 
       try {
-        const response = await fetch(protectedCvUrl, {
+        const noCacheCvUrl = buildNoCacheUrl(protectedCvUrl, versionParam);
+
+        const response = await fetch(noCacheCvUrl, {
           method: "GET",
+          cache: "no-store",
           headers: {
             Authorization: `Bearer ${accessToken}`,
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
           },
         });
 
@@ -136,7 +155,8 @@ export default function CvPreviewClient() {
           </h1>
 
           <p className="mt-2 text-sm font-normal leading-6 text-[#585958]">
-            {errorMessage || "The CV link is missing or expired. Please go back and try again."}
+            {errorMessage ||
+              "The CV link is missing or expired. Please go back and try again."}
           </p>
 
           <button
@@ -193,7 +213,10 @@ export default function CvPreviewClient() {
         {isLoading ? (
           <div className="flex h-[calc(100vh-150px)] items-center justify-center rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60">
             <div className="text-center">
-              <FiLoader className="mx-auto animate-spin text-[#F7631E]" size={28} />
+              <FiLoader
+                className="mx-auto animate-spin text-[#F7631E]"
+                size={28}
+              />
               <p className="mt-3 text-sm font-normal text-[#585958]">
                 Loading secure CV preview...
               </p>
