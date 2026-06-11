@@ -3,10 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BsBriefcaseFill } from "react-icons/bs";
-import { IoClose, IoNotificationsOutline } from "react-icons/io5";
-import { HiOutlineMenuAlt3 } from "react-icons/hi";
-import { FiLogOut, FiUser } from "react-icons/fi";
+import {
+  FiBell,
+  FiChevronDown,
+  FiLogOut,
+  FiMenu,
+  FiMoon,
+  FiSearch,
+  FiSun,
+  FiUser,
+  FiX,
+} from "react-icons/fi";
 
 import { getCurrentUser } from "@/lib/api/authApi";
 import {
@@ -16,16 +23,75 @@ import {
   setSelectedLoginMode,
 } from "@/lib/utils/tokenStorage";
 
+const THEME_STORAGE_KEY = "accdoo-theme-mode";
+
+function AccDooLogo({ isDark = false }) {
+  return (
+    <Link href="/" className="inline-flex items-center" aria-label="AccDoo home">
+      <img
+        src="/accdoo-logo.svg"
+        alt="AccDoo"
+        className={`h-[24px] w-auto object-contain max-md:h-[18px] ${
+          isDark ? "brightness-0 invert" : ""
+        }`}
+      />
+    </Link>
+  );
+}
+
 function ProfileAvatar({ user }) {
   const firstLetter =
     user?.name?.trim()?.charAt(0)?.toUpperCase() ||
     user?.email?.trim()?.charAt(0)?.toUpperCase() ||
-    "U";
+    "K";
 
   return (
-    <span className="grid h-full w-full place-items-center rounded-full bg-[#F7631E] text-sm font-medium text-white">
+    <span className="grid h-full w-full place-items-center overflow-hidden rounded-full bg-[#D8E8FF] text-[12px] font-semibold text-[#0152A4]">
       {firstLetter}
     </span>
+  );
+}
+
+function ThemeToggle({ theme, onToggle }) {
+  const isDark = theme === "dark";
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label="Toggle dark mode"
+      className={`relative inline-flex h-[21px] w-[43px] items-center rounded-full border p-[2px] transition ${
+        isDark
+          ? "border-[#2C3441] bg-[#101827]"
+          : "border-[#D7DFEA] bg-[#EDF3FB]"
+      }`}
+    >
+      <span
+        className={`grid h-[16px] w-[16px] place-items-center rounded-full bg-[#0152A4] text-white shadow-sm transition-transform duration-200 ${
+          isDark ? "translate-x-[20px]" : "translate-x-0"
+        }`}
+      >
+        {isDark ? <FiMoon size={9} /> : <FiSun size={9} />}
+      </span>
+    </button>
+  );
+}
+
+function PostJobButton({ onClick, isDark }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex h-[29px] items-center justify-center gap-[7px] rounded-full border px-[13px] text-[11px] font-bold leading-none shadow-sm transition hover:-translate-y-[1px] active:translate-y-0"
+      style={{
+        color: isDark ? "#FFFFFF" : "#0152A4",
+        backgroundColor: isDark ? "rgba(255,255,255,0.055)" : "#F5F9FF",
+        borderColor: isDark ? "rgba(255,255,255,0.16)" : "#AFCBEF",
+      }}
+    >
+      <span>Post a Job</span>
+      <span className="text-[16px] font-medium leading-none">+</span>
+    </button>
   );
 }
 
@@ -36,6 +102,17 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [theme, setTheme] = useState("light");
+  const [themeReady, setThemeReady] = useState(false);
+
+  useEffect(() => {
+    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    const nextTheme = storedTheme === "dark" ? "dark" : "light";
+
+    setTheme(nextTheme);
+    document.documentElement.classList.toggle("dark", nextTheme === "dark");
+    setThemeReady(true);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -92,6 +169,14 @@ export default function Navbar() {
     };
   }, []);
 
+  function toggleTheme() {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+
+    setTheme(nextTheme);
+    localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    document.documentElement.classList.toggle("dark", nextTheme === "dark");
+  }
+
   function handleLogout() {
     clearAuthData();
     setCurrentUser(null);
@@ -123,204 +208,312 @@ export default function Navbar() {
   function handleProfileClick() {
     setOpen(false);
     setProfileOpen(false);
+
+    if (currentUser?.role === "recruiter") {
+      router.push("/recruiter/dashboard");
+      return;
+    }
+
     router.push("/candidate/profile");
   }
 
+  const isLoggedIn = Boolean(currentUser);
+  const isDark = theme === "dark";
   const canRecruit =
     currentUser?.role === "recruiter" || currentUser?.role === "both";
 
+  const navTextColor = isDark ? "#FFFFFF" : "#071F3A";
+  const mutedTextColor = isDark ? "rgba(255,255,255,0.62)" : "#A7AFBD";
+  const authLinkColor = isDark ? "#FFFFFF" : "#0152A4";
+
   return (
-    <header className="w-full border-b border-slate-200 bg-white font-sans">
-      <nav className="mx-auto flex h-22 max-w-7xl items-center justify-between px-6 lg:px-8">
-        <Link
-          href="/"
-          className="flex items-center gap-3 text-[25px] font-semibold tracking-tight text-[#0C203A]"
-        >
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#F7631E] text-white shadow-sm">
-            <BsBriefcaseFill size={16} />
-          </span>
-          AccDoo
-        </Link>
+    <header className="sticky top-0 z-50 w-full bg-[var(--nav-bg)] font-sans shadow-[0_1px_0_rgba(2,18,38,0.055)] dark:shadow-none">
+      <nav className="mx-auto flex h-[54px] w-full max-w-[1440px] items-center justify-between px-[68px] max-xl:px-10 max-md:h-[66px] max-md:px-[26px]">
+        <AccDooLogo isDark={isDark} />
 
-        <div className="hidden items-center gap-7 md:flex">
-          <button
-            type="button"
-            onClick={handlePostJobClick}
-            className="text-[17px] font-normal text-[#0C203A] transition hover:text-[#F7631E]"
-          >
-            {currentUser && !canRecruit ? "Become a recruiter" : "+ Post a job"}
-          </button>
+        <div className="hidden items-center gap-[18px] md:flex">
+          <PostJobButton onClick={handlePostJobClick} isDark={isDark} />
 
-          {currentUser ? (
-            <div ref={profileMenuRef} className="relative">
-              <button
-                type="button"
-                onClick={() => setProfileOpen((current) => !current)}
-                className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white p-1 shadow-sm transition hover:border-[#F7631E]"
-                aria-label="Open profile menu"
-              >
-                <ProfileAvatar user={currentUser} />
-              </button>
-
-              {profileOpen ? (
-                <div className="absolute right-0 top-[calc(100%+12px)] z-50 w-72 overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-900/10">
-                  <div className="flex items-center gap-3 rounded-2xl bg-[#F9FBFB] p-3">
-                    <div className="h-12 w-12 shrink-0 rounded-full">
-                      <ProfileAvatar user={currentUser} />
-                    </div>
-
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-[#202020]">
-                        {currentUser.name || "User"}
-                      </p>
-                      <p className="truncate text-xs font-normal text-[#585958]">
-                        {currentUser.email}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 space-y-1">
-                    <button
-                      type="button"
-                      onClick={handleProfileClick}
-                      className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-normal text-[#202020] transition hover:bg-orange-50 hover:text-[#F7631E]"
-                    >
-                      <FiUser size={17} />
-                      Profile
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-normal text-red-600 transition hover:bg-red-50"
-                    >
-                      <FiLogOut size={17} />
-                      Logout
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : (
+          {!isLoggedIn ? (
             <>
               <Link
                 href="/register"
-                className="text-[17px] font-normal text-[#0C203A] transition hover:text-[#F7631E]"
+                className="text-[11px] font-bold leading-none transition hover:opacity-75"
+                style={{ color: authLinkColor }}
               >
                 Register
               </Link>
 
               <Link
                 href="/login"
-                className="rounded-xl bg-[#F7631E] px-7 py-3 text-[16px] font-medium text-white shadow-sm transition hover:bg-[#e85512]"
+                className="text-[11px] font-bold leading-none transition hover:opacity-75"
+                style={{ color: authLinkColor }}
               >
                 Login
               </Link>
             </>
-          )}
+          ) : null}
 
-          <button
-            type="button"
-            aria-label="Notifications"
-            className="grid h-11 w-11 place-items-center rounded-full text-[#0C203A] transition hover:bg-slate-100"
-          >
-            <IoNotificationsOutline size={22} />
-          </button>
+          <div className="flex items-center gap-[8px]">
+            {themeReady ? (
+              <ThemeToggle theme={theme} onToggle={toggleTheme} />
+            ) : (
+              <span className="h-[21px] w-[43px] rounded-full bg-[#EDF3FB]" />
+            )}
+
+            <button
+              type="button"
+              aria-label="Search"
+              className="grid h-[22px] w-[22px] place-items-center rounded-full transition hover:bg-black/5 dark:hover:bg-white/10"
+              style={{ color: navTextColor }}
+            >
+              <FiSearch size={14} />
+            </button>
+
+            <button
+              type="button"
+              aria-label="Notifications"
+              className="relative grid h-[22px] w-[22px] place-items-center rounded-full transition hover:bg-black/5 dark:hover:bg-white/10"
+              style={{ color: navTextColor }}
+            >
+              <FiBell size={14} />
+              <span className="absolute right-[3px] top-[2px] h-[5px] w-[5px] rounded-full bg-[#FF3347]" />
+            </button>
+          </div>
+
+          {isLoggedIn ? (
+            <>
+              <span className="h-[22px] w-px bg-[#D8DEE8] dark:bg-white/10" />
+
+              <div ref={profileMenuRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setProfileOpen((current) => !current)}
+                  className="flex items-center gap-[9px]"
+                  aria-label="Open profile menu"
+                >
+                  <span className="h-[32px] w-[32px] rounded-full">
+                    <ProfileAvatar user={currentUser} />
+                  </span>
+
+                  <span className="hidden max-w-[140px] text-left lg:block">
+                    <span
+                      className="block text-[9px] font-medium leading-[1.1]"
+                      style={{ color: mutedTextColor }}
+                    >
+                      {canRecruit ? "Enterprise" : "Candidate"}
+                    </span>
+                    <span
+                      className="block truncate text-[11px] font-semibold leading-[1.25]"
+                      style={{ color: navTextColor }}
+                    >
+                      {currentUser.name || "User"}
+                    </span>
+                  </span>
+
+                  <FiChevronDown size={12} style={{ color: mutedTextColor }} />
+                </button>
+
+                {profileOpen ? (
+                  <div className="absolute right-0 top-[calc(100%+13px)] z-50 w-[250px] overflow-hidden rounded-[18px] border border-[var(--line-soft)] bg-[var(--surface-bg)] p-3 shadow-2xl shadow-slate-950/15">
+                    <div className="flex items-center gap-3 rounded-[14px] bg-black/[0.03] p-3 dark:bg-white/[0.06]">
+                      <div className="h-10 w-10 shrink-0 rounded-full">
+                        <ProfileAvatar user={currentUser} />
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="truncate text-[13px] font-semibold text-[var(--text-main)]">
+                          {currentUser.name || "User"}
+                        </p>
+                        <p className="truncate text-[11px] font-medium text-[var(--text-muted)]">
+                          {currentUser.email}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 space-y-1">
+                      <button
+                        type="button"
+                        onClick={handleProfileClick}
+                        className="flex w-full items-center gap-3 rounded-[13px] px-3 py-3 text-left text-[13px] font-semibold text-[var(--text-main)] transition hover:bg-[#0152A4]/10 hover:text-[#0152A4]"
+                      >
+                        <FiUser size={15} />
+                        Profile
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="flex w-full items-center gap-3 rounded-[13px] px-3 py-3 text-left text-[13px] font-semibold text-[#FF3347] transition hover:bg-red-500/10"
+                      >
+                        <FiLogOut size={15} />
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </>
+          ) : null}
         </div>
 
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="grid h-11 w-11 place-items-center rounded-full text-[#0C203A] transition hover:bg-slate-100 md:hidden"
+          className="grid h-[34px] w-[34px] place-items-center rounded-full text-[var(--text-main)] md:hidden"
           aria-label="Open menu"
         >
-          <HiOutlineMenuAlt3 size={25} />
+          <FiMenu size={27} />
         </button>
       </nav>
 
       {open ? (
-        <div className="fixed inset-0 z-50 bg-slate-950/40 md:hidden">
-          <div className="ml-auto h-screen w-[84%] bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <Link
-                href="/"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-3 text-xl font-semibold text-[#0C203A]"
-              >
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#F7631E] text-white">
-                  <BsBriefcaseFill size={15} />
-                </span>
-                AccDoo
-              </Link>
+        <div className="fixed inset-0 z-[100] bg-black/30 md:hidden">
+          <aside className="ml-auto flex h-screen w-[82%] max-w-[315px] flex-col overflow-hidden bg-[#1459F4] shadow-2xl">
+            <div className="flex h-[74px] items-center justify-between bg-white px-[24px]">
+              <AccDooLogo isDark={false} />
 
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Close menu"
+                className="grid h-9 w-9 place-items-center text-[#071F3A]"
               >
-                <IoClose size={28} />
+                <FiX size={23} />
               </button>
             </div>
 
-            <div className="mt-10 space-y-6">
-              <button
-                type="button"
-                onClick={handlePostJobClick}
-                className="block text-lg font-medium text-[#0C203A]"
-              >
-                {currentUser && !canRecruit ? "Become a recruiter" : "+ Post a job"}
-              </button>
+            <div className="flex items-center justify-between px-[24px] pt-[24px]">
+              {isLoggedIn ? (
+                <button
+                  type="button"
+                  onClick={handleProfileClick}
+                  className="flex items-center gap-[10px] text-left"
+                >
+                  <span className="h-[36px] w-[36px] rounded-full">
+                    <ProfileAvatar user={currentUser} />
+                  </span>
 
-              {currentUser ? (
-                <>
+                  <span>
+                    <span className="block text-[9px] font-medium leading-[1.15] text-white/75">
+                      {canRecruit ? "Enterprise" : "Candidate"}
+                    </span>
+                    <span className="block text-[12px] font-semibold leading-[1.2] text-white">
+                      {currentUser?.name || "User"}
+                    </span>
+                  </span>
+                </button>
+              ) : (
+                <div>
+                  <p className="text-[13px] font-semibold text-white">
+                    Welcome to AccDoo
+                  </p>
+                  <p className="mt-[4px] text-[10px] font-medium text-white/70">
+                    Find your next opportunity
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center gap-[10px]">
+                {themeReady ? (
+                  <ThemeToggle theme={theme} onToggle={toggleTheme} />
+                ) : null}
+
+                <button
+                  type="button"
+                  aria-label="Notifications"
+                  className="relative grid h-[26px] w-[26px] place-items-center rounded-full text-white"
+                >
+                  <FiBell size={16} />
+                  <span className="absolute right-[4px] top-[4px] h-[5px] w-[5px] rounded-full bg-[#FF3347]" />
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-[31px] px-[24px]">
+              <div className="divide-y divide-white/20 border-y border-white/20">
+                {!isLoggedIn ? (
+                  <Link
+                    href="/register"
+                    onClick={() => setOpen(false)}
+                    className="block py-[16px] text-[14px] font-medium text-white"
+                  >
+                    Register
+                  </Link>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={handlePostJobClick}
+                  className="block w-full py-[16px] text-left text-[14px] font-medium text-white"
+                >
+                  Post a Job
+                </button>
+
+                {isLoggedIn ? (
                   <button
                     type="button"
                     onClick={handleProfileClick}
-                    className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-[#F9FBFB] px-4 py-3 text-left"
+                    className="block w-full py-[16px] text-left text-[14px] font-medium text-white"
                   >
-                    <div className="h-11 w-11 rounded-full">
-                      <ProfileAvatar user={currentUser} />
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-medium text-[#0C203A]">
-                        {currentUser.name || "User"}
-                      </p>
-                      <p className="text-xs font-normal text-slate-500">
-                        View profile
-                      </p>
-                    </div>
+                    Profile
                   </button>
+                ) : null}
 
+                <Link
+                  href="/"
+                  onClick={() => setOpen(false)}
+                  className="block py-[16px] text-[14px] font-medium text-white"
+                >
+                  About
+                </Link>
+
+                <Link
+                  href="/"
+                  onClick={() => setOpen(false)}
+                  className="block py-[16px] text-[14px] font-medium text-white"
+                >
+                  Contact us
+                </Link>
+
+                {isLoggedIn ? (
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="inline-flex rounded-xl bg-[#F7631E] px-6 py-3 text-sm font-medium text-white"
+                    className="block w-full py-[16px] text-left text-[14px] font-medium text-white"
                   >
                     Logout
                   </button>
-                </>
-              ) : (
+                ) : null}
+              </div>
+            </div>
+
+            <div className="mt-auto px-[28px] pb-[22px]">
+              {!isLoggedIn ? (
                 <>
                   <Link
                     href="/register"
                     onClick={() => setOpen(false)}
-                    className="block text-lg font-medium text-[#0C203A]"
+                    className="mb-[12px] grid h-[38px] w-full place-items-center rounded-[5px] bg-[#F9A11B] text-[12px] font-semibold text-white"
                   >
-                    Register
+                    Sign Up
                   </Link>
 
                   <Link
                     href="/login"
                     onClick={() => setOpen(false)}
-                    className="inline-flex rounded-xl bg-[#F7631E] px-6 py-3 text-sm font-medium text-white"
+                    className="grid h-[38px] w-full place-items-center rounded-[5px] border border-white/25 text-[12px] font-semibold text-white"
                   >
                     Login
                   </Link>
                 </>
-              )}
+              ) : null}
+
+              <p className="mt-[15px] text-center text-[10px] font-medium text-white/65">
+                © accdoo.jobs 2026
+              </p>
             </div>
-          </div>
+          </aside>
         </div>
       ) : null}
     </header>

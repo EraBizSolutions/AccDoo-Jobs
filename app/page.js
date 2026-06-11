@@ -5,7 +5,7 @@ import Footer from "@/components/home/Footer";
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="accdoo-page-bg min-h-screen">
       <Navbar />
       <JobSearchHero />
       <JobsList />

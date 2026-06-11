@@ -1,25 +1,141 @@
 @import "tailwindcss";
 
+:root {
+  --accdoo-main: #0152a4;
+  --accdoo-secondary: #2563ff;
+  --accdoo-sun: #f9a11b;
+  --accdoo-green: #13c276;
+  --accdoo-red: #ff3347;
+
+  --page-bg: #f6f6f6;
+  --nav-bg: #ffffff;
+  --hero-bg: #2563ff;
+  --surface-bg: #ffffff;
+  --card-bg: #ffffff;
+
+  --text-main: #071f3a;
+  --text-muted: #7f8794;
+  --text-soft: #b7bdc8;
+  --text-faint: #c7ccd5;
+
+  --line-soft: #edf0f5;
+  --line-strong: #dce2ec;
+
+  --shadow-search: 0 22px 60px rgba(15, 23, 42, 0.09);
+  --shadow-card: 0 16px 38px rgba(15, 23, 42, 0.075);
+}
+
+html.dark {
+  --page-bg: #151d2a;
+  --nav-bg: #0b0b0b;
+  --hero-bg: #2563ff;
+  --surface-bg: #0b0b0b;
+  --card-bg: #0b0b0b;
+
+  --text-main: #f4f7fb;
+  --text-muted: #747e90;
+  --text-soft: #5f6878;
+  --text-faint: #4d5665;
+
+  --line-soft: #1f2530;
+  --line-strong: #2e3542;
+
+  --shadow-search: 0 22px 60px rgba(0, 0, 0, 0.22);
+  --shadow-card: 0 16px 38px rgba(0, 0, 0, 0.23);
+}
+
 * {
   box-sizing: border-box;
 }
 
 html {
   scroll-behavior: smooth;
+  background: var(--page-bg);
 }
 
 body {
   margin: 0;
-  background: #ffffff;
-  color: #0f172a;
-  font-family: Inter, Arial, Helvetica, sans-serif;
-}
-
-html,
-body {
+  min-height: 100vh;
   overflow-x: hidden;
+  background: var(--page-bg);
+  color: var(--text-main);
 }
 
-* {
-  box-sizing: border-box;
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+::selection {
+  background: rgba(37, 99, 255, 0.2);
+}
+
+.accdoo-page-bg {
+  background:
+    radial-gradient(circle at 50% 132px, rgba(1, 82, 164, 0.045), transparent 360px),
+    var(--page-bg);
+}
+
+html.dark .accdoo-page-bg {
+  background:
+    radial-gradient(circle at 50% 128px, rgba(37, 99, 255, 0.075), transparent 370px),
+    var(--page-bg);
+}
+
+.accdoo-soft-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(127, 135, 148, 0.45) transparent;
+}
+
+.accdoo-soft-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.accdoo-soft-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.accdoo-soft-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(127, 135, 148, 0.45);
+}
+
+.pac-container {
+  z-index: 999999 !important;
+  margin-top: 8px !important;
+  overflow: hidden !important;
+  border: 1px solid #e5e9f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12) !important;
+  font-family: inherit !important;
+}
+
+.pac-item {
+  padding: 10px 14px !important;
+  cursor: pointer !important;
+  font-size: 12px !important;
+}
+
+.pac-item:hover {
+  background: #f5f8ff !important;
+}
+
+.pac-item-query {
+  color: #071f3a !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+:root {
+  --filter-border: #c9c7d8;
+}
+
+.dark {
+  --filter-border: #3a4250;
 }
