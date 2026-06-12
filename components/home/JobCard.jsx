@@ -7,21 +7,33 @@ import {
   FiBriefcase,
   FiCheck,
   FiMapPin,
-  FiZap,
 } from "react-icons/fi";
 
 const CARD_COLORS = [
   "#0152A4",
   "#FF3347",
   "#C92FE6",
-  "#F9A11B",
+  "#F59E0B",
   "#13C276",
   "#89B6D6",
   "#0152A4",
-  "#000000",
+  "#001D39",
   "#FF3347",
   "#13C276",
 ];
+
+const FALLBACK_JOB = {
+  id: null,
+  title: "Product Designer (UI UX)",
+  company_name: "Energizer LTD",
+  description:
+    "Design and iterate intuitive digital products that delight our users.",
+  job_type: "Full-Time",
+  location: "Kottawa, Sri Lanka",
+  created_at: null,
+  match_label: null,
+  match_score: null,
+};
 
 function getAppBaseUrl() {
   const envUrl = process.env.NEXT_PUBLIC_APP_URL;
@@ -56,7 +68,7 @@ function formatDate(value) {
 function formatJobType(jobType) {
   if (!jobType) return "Full-Time";
 
-  return jobType
+  return String(jobType)
     .split("-")
     .map((word) => word[0]?.toUpperCase() + word.slice(1))
     .join("-");
@@ -67,7 +79,7 @@ function getCompanyName(job) {
 }
 
 function getTitle(job) {
-  return job.title || "User Interface Designer";
+  return job.title || "Product Designer (UI UX)";
 }
 
 function getDescription(job) {
@@ -77,11 +89,11 @@ function getDescription(job) {
     return "Design and iterate intuitive digital products that delight our users.";
   }
 
-  if (description.length <= 82) {
+  if (description.length <= 86) {
     return description;
   }
 
-  return `${description.slice(0, 82).trim()}...`;
+  return `${description.slice(0, 86).trim()}...`;
 }
 
 function getFallbackMatch(colorIndex) {
@@ -118,9 +130,41 @@ function ButterflyLogo({ color }) {
   );
 }
 
+function MatchIcon() {
+  return (
+    <span className="inline-grid h-[13px] w-[13px] shrink-0 place-items-center">
+      <svg
+        viewBox="0 0 18 18"
+        className="h-[13px] w-[13px]"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M9 1.8L10.45 6.15L14.85 7.55L10.45 8.95L9 13.2L7.55 8.95L3.15 7.55L7.55 6.15L9 1.8Z"
+          stroke="#87DEB4"
+          strokeWidth="1.35"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M3.2 11.2L3.95 13.35L6.1 14.1L3.95 14.85L3.2 17L2.45 14.85L0.3 14.1L2.45 13.35L3.2 11.2Z"
+          stroke="#87DEB4"
+          strokeWidth="1"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M14.3 1L14.85 2.55L16.4 3.1L14.85 3.65L14.3 5.2L13.75 3.65L12.2 3.1L13.75 2.55L14.3 1Z"
+          stroke="#87DEB4"
+          strokeWidth="0.9"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
 function JobMetaItem({ icon, children }) {
   return (
-    <span className="inline-flex min-w-0 items-center gap-[5px] whitespace-nowrap text-[10px] font-medium text-[var(--text-muted)] max-md:text-[9px]">
+    <span className="inline-flex min-w-0 items-center gap-[5px] whitespace-nowrap text-[10px] font-medium leading-none text-[var(--text-muted)] max-md:text-[9px]">
       {icon}
       {children}
     </span>
@@ -129,8 +173,8 @@ function JobMetaItem({ icon, children }) {
 
 function MatchPill({ label, score }) {
   return (
-    <span className="inline-flex h-[22px] items-center gap-[6px] rounded-full border border-[#154835] bg-[#062F24] px-[9px] text-[9px] font-semibold text-[#70E0AD] max-md:h-[20px] max-md:px-[7px] max-md:text-[8px]">
-      <FiZap size={10} />
+    <span className="inline-flex h-[23px] items-center gap-[6px] rounded-full bg-[#0F241F] px-[10px] text-[9px] font-semibold leading-none text-[#87DEB4] shadow-[inset_0_0_0_1px_rgba(135,222,180,0.10)] max-md:h-[21px] max-md:px-[8px] max-md:text-[8px]">
+      <MatchIcon />
       {label} {score}%
     </span>
   );
@@ -139,20 +183,30 @@ function MatchPill({ label, score }) {
 export default function JobCard({ job, colorIndex = 0 }) {
   const [shareStatus, setShareStatus] = useState("");
 
-  const jobDetailsPath = `/jobs/${job.id}`;
+  const safeJob = {
+    ...FALLBACK_JOB,
+    ...(job || {}),
+  };
+
+  const jobId = safeJob.id || safeJob.job_id || safeJob.slug || null;
+  const jobDetailsPath = jobId ? `/jobs/${jobId}` : "/jobs";
   const fullJobUrl = `${getAppBaseUrl()}${jobDetailsPath}`;
-  const companyName = getCompanyName(job);
-  const title = getTitle(job);
-  const description = getDescription(job);
+  const companyName = getCompanyName(safeJob);
+  const title = getTitle(safeJob);
+  const description = getDescription(safeJob);
   const iconColor = CARD_COLORS[colorIndex % CARD_COLORS.length];
 
   const fallbackMatch = getFallbackMatch(colorIndex);
+  const numericMatchScore = Number(safeJob.match_score);
+
   const matchScore =
-    job.match_score !== null && job.match_score !== undefined
-      ? Math.round(Number(job.match_score))
+    safeJob.match_score !== null &&
+    safeJob.match_score !== undefined &&
+    !Number.isNaN(numericMatchScore)
+      ? Math.round(numericMatchScore)
       : fallbackMatch.score;
 
-  const matchLabel = job.match_label || fallbackMatch.label;
+  const matchLabel = safeJob.match_label || fallbackMatch.label;
 
   async function handleShareJob(event) {
     event.preventDefault();
@@ -200,10 +254,10 @@ export default function JobCard({ job, colorIndex = 0 }) {
   }
 
   return (
-    <article className="group relative h-[168px] rounded-[10px] border border-transparent bg-[var(--card-bg)] shadow-[var(--shadow-card)] transition duration-200 hover:-translate-y-[1px] hover:border-[#2563FF] hover:ring-1 hover:ring-[#2563FF]/10 max-md:h-[156px] max-md:rounded-[9px]">
+    <article className="group relative h-[176px] rounded-[10px] border border-transparent bg-[var(--card-bg)] shadow-[var(--shadow-card)] transition duration-200 hover:-translate-y-[1px] hover:border-[#155DFC] hover:ring-1 hover:ring-[#155DFC]/20 hover:shadow-[0_0_40.5px_rgba(0,0,0,0.08)] dark:hover:border-[#4CA5FF] max-md:h-[162px] max-md:rounded-[9px]">
       <Link
         href={jobDetailsPath}
-        className="flex h-full flex-col px-[16px] pb-[12px] pt-[16px] max-md:px-[13px] max-md:pb-[10px] max-md:pt-[13px]"
+        className="flex h-full flex-col px-[16px] pb-[13px] pt-[16px] max-md:px-[13px] max-md:pb-[11px] max-md:pt-[13px]"
       >
         <div className="flex items-start gap-[15px] max-md:gap-[11px]">
           <ButterflyLogo color={iconColor} />
@@ -223,7 +277,7 @@ export default function JobCard({ job, colorIndex = 0 }) {
               <button
                 type="button"
                 onClick={handleShareJob}
-                className="grid h-[28px] w-[28px] shrink-0 place-items-center rounded-full bg-black/[0.035] text-[#A8B0BE] transition hover:bg-[#2563FF]/10 hover:text-[#2563FF] dark:bg-white/[0.05] dark:text-[#5F6878] max-md:h-[24px] max-md:w-[24px]"
+                className="grid h-[28px] w-[28px] shrink-0 place-items-center rounded-full bg-black/[0.035] text-[#A8B0BE] transition hover:bg-[#155DFC]/10 hover:text-[#155DFC] dark:bg-white/[0.05] dark:text-[#5F6878] max-md:h-[24px] max-md:w-[24px]"
                 aria-label="Save job"
               >
                 {shareStatus === "Copied" || shareStatus === "Saved" ? (
@@ -234,25 +288,25 @@ export default function JobCard({ job, colorIndex = 0 }) {
               </button>
             </div>
 
-            <div className="mt-[7px]">
+            <div className="mt-[8px]">
               <MatchPill label={matchLabel} score={matchScore} />
             </div>
           </div>
         </div>
 
-        <div className="mt-[17px] mb-[8px] flex flex-1 items-start justify-between gap-4 max-md:mt-[10px] max-md:mb-[7px] max-md:gap-3">
-          <p className="line-clamp-2 max-w-[260px] text-[10px] font-medium leading-[1.35] text-[var(--text-muted)] max-md:max-w-[170px] max-md:text-[9px] max-md:leading-[1.35]">
+        <div className="mb-[8px] mt-[18px] flex flex-1 items-start justify-between gap-4 max-md:mb-[7px] max-md:mt-[11px] max-md:gap-3">
+          <p className="line-clamp-2 max-w-[260px] text-[10px] font-medium leading-[1.32] text-[var(--text-muted)] max-md:max-w-[170px] max-md:text-[9px] max-md:leading-[1.35]">
             {description}
           </p>
 
-          <span className="grid h-[30px] min-w-[68px] place-items-center rounded-[4px] bg-[#2563FF] text-[11px] font-semibold text-white shadow-sm transition group-hover:bg-[#0152A4] max-md:h-[26px] max-md:min-w-[55px] max-md:text-[9px]">
+          <span className="mt-[1px] grid h-[30px] min-w-[68px] place-items-center rounded-[5px] bg-[#155DFC] text-[11px] font-semibold text-white shadow-[1px_1px_6.6px_rgba(0,0,0,0.09)] transition group-hover:bg-[#014FE0] max-md:h-[26px] max-md:min-w-[55px] max-md:text-[9px]">
             Apply
           </span>
         </div>
 
-        <div className="mt-auto border-t border-[var(--line-soft)] pt-[12px] max-md:pt-[10px]">
+        <div className="mt-auto border-t border-[var(--line-soft)] pt-[14px] max-md:pt-[11px]">
           <div className="flex items-center justify-between gap-[10px]">
-            <div className="flex min-w-0 flex-1 items-center gap-[13px] max-md:gap-[10px]">
+            <div className="flex min-w-0 flex-1 items-center gap-[14px] max-md:gap-[10px]">
               <JobMetaItem
                 icon={
                   <FiBriefcase
@@ -261,7 +315,7 @@ export default function JobCard({ job, colorIndex = 0 }) {
                   />
                 }
               >
-                {formatJobType(job.job_type)}
+                {formatJobType(safeJob.job_type)}
               </JobMetaItem>
 
               <JobMetaItem
@@ -273,15 +327,15 @@ export default function JobCard({ job, colorIndex = 0 }) {
                 }
               >
                 <span className="max-w-[120px] truncate max-md:max-w-[90px]">
-                  {job.location || "Kottawa, Sri Lanka"}
+                  {safeJob.location || "Kottawa, Sri Lanka"}
                 </span>
               </JobMetaItem>
             </div>
 
-            <span className="shrink-0 whitespace-nowrap text-[10px] font-medium text-[var(--text-muted)] max-md:text-[9px]">
+            <span className="shrink-0 whitespace-nowrap text-[10px] font-medium leading-none text-[var(--text-muted)] max-md:text-[9px]">
               <span className="hidden md:inline">Posted on </span>
               <span className="md:hidden">On </span>
-              {formatDate(job.created_at)}
+              {formatDate(safeJob.created_at)}
             </span>
           </div>
         </div>
