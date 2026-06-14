@@ -10,6 +10,7 @@ import {
 } from "react-icons/fi";
 
 const GOOGLE_MAPS_SCRIPT_ID = "google-maps-places-script";
+const THEME_STORAGE_KEY = "accdoo-theme-mode";
 
 const initialFilters = {
   search: "",
@@ -54,52 +55,34 @@ const TECH_STACKS = [
   { label: "Node.js", value: "node" },
 ];
 
+const UI = {
+  heroBlue: "#155DFC",
+  lightCard: "#FEFEFE",
+  darkCard: "#0F1117",
+  lightCardBorder: "#EFEFEF",
+  darkCardBorder: "#222936",
+  lightInputText: "#001D39",
+  darkInputText: "#FFFFFF",
+  placeholder: "#B2AFBC",
+  lightLine: "#E0DEE6",
+  darkLine: "#E0DEE6",
+  lightFilterBg: "#FAFAFA",
+  darkFilterBg: "transparent",
+  lightFilterText: "#001D39",
+  darkFilterText: "#C6E3FF",
+  lightFilterBorder: "#C5C2D1",
+  darkFilterBorder: "#C6E3FF",
+  activeBlue: "#155DFC",
+  clearRed: "#FB2C36",
+  searchOrange: "#F59E0B",
+};
+
 function publishJobFilters(filters) {
   window.dispatchEvent(
     new CustomEvent("AccDoo:jobFiltersChanged", {
       detail: filters,
     })
   );
-}
-
-function injectGooglePlacesDropdownStyles() {
-  if (typeof document === "undefined") return;
-
-  const styleId = "accdoo-home-google-places-style";
-
-  if (document.getElementById(styleId)) return;
-
-  const style = document.createElement("style");
-  style.id = styleId;
-  style.innerHTML = `
-    .pac-container {
-      z-index: 999999 !important;
-      border-radius: 16px !important;
-      margin-top: 8px !important;
-      border: 1px solid #e2e8f0 !important;
-      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12) !important;
-      font-family: inherit !important;
-      overflow: hidden !important;
-    }
-
-    .pac-item {
-      padding: 12px 14px !important;
-      font-size: 14px !important;
-      cursor: pointer !important;
-    }
-
-    .pac-item:hover {
-      background: #fff7ed !important;
-    }
-
-    .pac-item-query {
-      color: #202020 !important;
-      font-size: 14px !important;
-      font-weight: 500 !important;
-    }
-  `;
-
-  document.head.appendChild(style);
 }
 
 function loadGoogleMapsScript(apiKey) {
@@ -144,10 +127,81 @@ function loadGoogleMapsScript(apiKey) {
 }
 
 function getSelectedLabel(options, value) {
-  return options.find((option) => option.value === value)?.label || options[0].label;
+  return (
+    options.find((option) => option.value === value)?.label || options[0].label
+  );
 }
 
-function SingleFilterDropdown({ name, value, options, onChange }) {
+function FilterButton({
+  children,
+  isActive,
+  isOpen,
+  onClick,
+  isDark,
+  width = "normal",
+}) {
+  const widthClass =
+    width === "tech"
+      ? "min-w-[112px]"
+      : width === "modality"
+        ? "min-w-[101px]"
+        : width === "salary"
+          ? "min-w-[82px]"
+          : "min-w-[92px]";
+
+  const textWidthClass =
+    width === "tech"
+      ? "max-w-[84px]"
+      : width === "modality"
+        ? "max-w-[73px]"
+        : width === "salary"
+          ? "max-w-[56px]"
+          : "max-w-[64px]";
+
+  const buttonStyle = {
+    color: isActive ? UI.activeBlue : isDark ? UI.darkFilterText : UI.lightFilterText,
+    backgroundColor: isActive
+      ? isDark
+        ? "rgba(255,255,255,0.06)"
+        : "#EBF5FF"
+      : isDark
+        ? UI.darkFilterBg
+        : UI.lightFilterBg,
+    borderColor: isActive
+      ? isDark
+        ? UI.darkFilterBorder
+        : UI.activeBlue
+      : isDark
+        ? UI.darkFilterBorder
+        : UI.lightFilterBorder,
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex h-[30px] ${widthClass} items-center justify-between gap-[8px] rounded-[6px] border px-[11px] text-[11px] font-semibold shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition hover:-translate-y-[1px] active:scale-[0.98]`}
+      style={buttonStyle}
+    >
+      <span className={`block truncate ${textWidthClass}`}>{children}</span>
+
+      <FiChevronDown
+        size={12}
+        className={`shrink-0 transition ${isOpen ? "rotate-180" : ""}`}
+        style={{ color: buttonStyle.color }}
+      />
+    </button>
+  );
+}
+
+function SingleFilterDropdown({
+  name,
+  value,
+  options,
+  onChange,
+  isDark,
+  width = "normal",
+}) {
   const wrapperRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -170,47 +224,64 @@ function SingleFilterDropdown({ name, value, options, onChange }) {
     setIsOpen(false);
   }
 
+  const hasValue = Boolean(value);
+  const label = getSelectedLabel(options, value);
+
   return (
     <div ref={wrapperRef} className="relative">
-      <button
-        type="button"
+      <FilterButton
+        isActive={hasValue}
+        isOpen={isOpen}
+        isDark={isDark}
         onClick={() => setIsOpen((current) => !current)}
-        className={`inline-flex min-w-[132px] items-center justify-between gap-4 rounded-xl border bg-white px-4 py-3 text-sm font-normal text-[#202020] transition ${
-          isOpen
-            ? "border-[#F7631E] shadow-sm"
-            : "border-slate-200 hover:border-[#F7631E]"
-        }`}
+        width={width}
       >
-        {getSelectedLabel(options, value)}
-        <FiChevronDown
-          size={16}
-          className={`transition ${isOpen ? "rotate-180 text-[#F7631E]" : ""}`}
-        />
-      </button>
+        {label}
+      </FilterButton>
 
       {isOpen ? (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-40 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white py-2 shadow-2xl shadow-slate-900/10">
-          {options.map((option) => (
-            <button
-              key={`${name}-${option.label}`}
-              type="button"
-              onClick={() => handleSelect(option.value)}
-              className={`block w-full px-4 py-2.5 text-left text-sm font-normal transition ${
-                option.value === value
-                  ? "bg-orange-50 text-[#F7631E]"
-                  : "text-[#202020] hover:bg-slate-50"
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
+        <div
+          className="absolute left-0 top-[calc(100%+8px)] z-40 w-[185px] overflow-hidden rounded-[10px] py-2 shadow-2xl shadow-black/15"
+          style={{
+            backgroundColor: isDark ? "#111827" : "#FFFFFF",
+            border: `1px solid ${isDark ? "rgba(255,255,255,0.10)" : "#E0DEE6"}`,
+          }}
+        >
+          {options.map((option) => {
+            const selected = option.value === value;
+
+            return (
+              <button
+                key={`${name}-${option.label}`}
+                type="button"
+                onClick={() => handleSelect(option.value)}
+                className="block w-full px-4 py-2.5 text-left text-[12px] font-semibold transition"
+                style={{
+                  color: selected
+                    ? isDark
+                      ? UI.darkFilterText
+                      : UI.activeBlue
+                    : isDark
+                      ? "rgba(255,255,255,0.82)"
+                      : UI.lightFilterText,
+                  backgroundColor: selected
+                    ? isDark
+                      ? "rgba(21,93,252,0.16)"
+                      : "#EEF4FF"
+                    : "transparent",
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
         </div>
       ) : null}
     </div>
   );
 }
 
-function MultiTechStackDropdown({ selectedValues, onChange }) {
+function MultiTechStackDropdown({ selectedValues, onChange, isDark }) {
   const wrapperRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -249,24 +320,24 @@ function MultiTechStackDropdown({ selectedValues, onChange }) {
 
   return (
     <div ref={wrapperRef} className="relative">
-      <button
-        type="button"
+      <FilterButton
+        isActive={selectedValues.length > 0}
+        isOpen={isOpen}
+        isDark={isDark}
         onClick={() => setIsOpen((current) => !current)}
-        className={`inline-flex min-w-[145px] items-center justify-between gap-4 rounded-xl border bg-white px-4 py-3 text-sm font-normal text-[#202020] transition ${
-          isOpen
-            ? "border-[#F7631E] shadow-sm"
-            : "border-slate-200 hover:border-[#F7631E]"
-        }`}
+        width="tech"
       >
         {label}
-        <FiChevronDown
-          size={16}
-          className={`transition ${isOpen ? "rotate-180 text-[#F7631E]" : ""}`}
-        />
-      </button>
+      </FilterButton>
 
       {isOpen ? (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-40 w-60 overflow-hidden rounded-xl border border-slate-200 bg-white py-2 shadow-2xl shadow-slate-900/10">
+        <div
+          className="absolute left-0 top-[calc(100%+8px)] z-40 w-[205px] overflow-hidden rounded-[10px] py-2 shadow-2xl shadow-black/15"
+          style={{
+            backgroundColor: isDark ? "#111827" : "#FFFFFF",
+            border: `1px solid ${isDark ? "rgba(255,255,255,0.10)" : "#E0DEE6"}`,
+          }}
+        >
           {TECH_STACKS.map((option) => {
             const isSelected = selectedValues.includes(option.value);
 
@@ -275,14 +346,24 @@ function MultiTechStackDropdown({ selectedValues, onChange }) {
                 key={option.value}
                 type="button"
                 onClick={() => toggleTechStack(option.value)}
-                className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm font-normal transition ${
-                  isSelected
-                    ? "bg-orange-50 text-[#F7631E]"
-                    : "text-[#202020] hover:bg-slate-50"
-                }`}
+                className="flex w-full items-center justify-between px-4 py-2.5 text-left text-[12px] font-semibold transition"
+                style={{
+                  color: isSelected
+                    ? isDark
+                      ? UI.darkFilterText
+                      : UI.activeBlue
+                    : isDark
+                      ? "rgba(255,255,255,0.82)"
+                      : UI.lightFilterText,
+                  backgroundColor: isSelected
+                    ? isDark
+                      ? "rgba(21,93,252,0.16)"
+                      : "#EEF4FF"
+                    : "transparent",
+                }}
               >
                 {option.label}
-                {isSelected ? <FiCheck size={16} /> : null}
+                {isSelected ? <FiCheck size={14} /> : null}
               </button>
             );
           })}
@@ -291,7 +372,13 @@ function MultiTechStackDropdown({ selectedValues, onChange }) {
             <button
               type="button"
               onClick={() => onChange("techStacks", [])}
-              className="mt-1 block w-full border-t border-slate-100 px-4 py-2.5 text-left text-sm font-normal text-slate-500 hover:bg-slate-50"
+              className="mt-1 block w-full px-4 py-2.5 text-left text-[12px] font-semibold"
+              style={{
+                borderTop: `1px solid ${
+                  isDark ? "rgba(255,255,255,0.10)" : "#E0DEE6"
+                }`,
+                color: isDark ? "rgba(255,255,255,0.62)" : "#6B7280",
+              }}
             >
               Clear tech stack
             </button>
@@ -302,23 +389,66 @@ function MultiTechStackDropdown({ selectedValues, onChange }) {
   );
 }
 
+function HeroPattern() {
+  return (
+    <div className="pointer-events-none absolute inset-y-0 right-0 w-[610px] overflow-hidden max-md:w-[200px]">
+      <span className="absolute right-[320px] top-[-8px] h-[30px] w-[205px] rotate-[-24deg] bg-[#001D39] max-md:right-[92px] max-md:top-[-7px] max-md:h-[17px] max-md:w-[76px]" />
+      <span className="absolute right-[310px] top-[52px] h-[30px] w-[92px] rotate-[-69deg] bg-white max-md:right-[118px] max-md:top-[47px] max-md:h-[20px] max-md:w-[42px]" />
+      <span className="absolute right-[178px] top-[27px] h-[30px] w-[238px] rotate-[45deg] bg-[#B4DCFF] max-md:right-[38px] max-md:top-[16px] max-md:h-[19px] max-md:w-[88px]" />
+      <span className="absolute right-[75px] top-[18px] h-[31px] w-[320px] rotate-[43deg] bg-[#001D39] max-md:right-[-4px] max-md:top-[7px] max-md:h-[20px] max-md:w-[126px]" />
+      <span className="absolute right-[67px] top-[-11px] h-[30px] w-[108px] rotate-[-49deg] bg-[#B4DCFF] max-md:right-[20px] max-md:top-[-4px] max-md:h-[19px] max-md:w-[43px]" />
+      <span className="absolute right-[-12px] top-[33px] h-[29px] w-[122px] rotate-[-3deg] bg-[#FFFFF9] max-md:right-[-18px] max-md:top-[27px] max-md:h-[18px] max-md:w-[54px]" />
+      <span className="absolute right-[-64px] bottom-[-20px] h-[32px] w-[180px] rotate-[-14deg] bg-[#001D39] max-md:right-[-45px] max-md:bottom-[-13px] max-md:h-[20px] max-md:w-[78px]" />
+    </div>
+  );
+}
+
 export default function JobSearchHero() {
   const locationInputRef = useRef(null);
 
   const [filters, setFilters] = useState(initialFilters);
-  const [locationError, setLocationError] = useState("");
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    function syncTheme() {
+      const storedTheme =
+        typeof window !== "undefined"
+          ? localStorage.getItem(THEME_STORAGE_KEY)
+          : "light";
+
+      const htmlHasDark =
+        typeof document !== "undefined" &&
+        document.documentElement.classList.contains("dark");
+
+      setIsDark(storedTheme === "dark" || htmlHasDark);
+    }
+
+    syncTheme();
+
+    const observer = new MutationObserver(syncTheme);
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    window.addEventListener("storage", syncTheme);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("storage", syncTheme);
+    };
+  }, []);
 
   useEffect(() => {
     publishJobFilters(filters);
   }, [filters]);
 
   useEffect(() => {
-    injectGooglePlacesDropdownStyles();
-
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
     if (!apiKey) {
-      setLocationError("Google location key missing.");
       return;
     }
 
@@ -329,7 +459,11 @@ export default function JobSearchHero() {
       try {
         await loadGoogleMapsScript(apiKey);
 
-        if (!isMounted || !locationInputRef.current || !window.google?.maps?.places) {
+        if (
+          !isMounted ||
+          !locationInputRef.current ||
+          !window.google?.maps?.places
+        ) {
           return;
         }
 
@@ -345,17 +479,17 @@ export default function JobSearchHero() {
         autocompleteInstance.addListener("place_changed", () => {
           const place = autocompleteInstance.getPlace();
           const selectedLocation =
-            place.formatted_address || place.name || locationInputRef.current.value;
+            place.formatted_address ||
+            place.name ||
+            locationInputRef.current.value;
 
           setFilters((currentFilters) => ({
             ...currentFilters,
             location: selectedLocation,
           }));
-
-          setLocationError("");
         });
       } catch {
-        setLocationError("Google location suggestions failed to load.");
+        // optional
       }
     }
 
@@ -397,35 +531,78 @@ export default function JobSearchHero() {
     }
   }
 
-  return (
-    <section className="bg-[#F9FBFB] px-4 pt-12 pb-0 font-sans sm:px-5 lg:px-8">
-      <div className="mx-auto w-full max-w-[1180px]">
-        <div className="pb-16">
-          <h1 className="max-w-[900px] text-[36px] font-medium leading-[1.15] tracking-tight text-[#202020] md:text-[48px] lg:text-[52px]">
-            Connect talent with opportunity through smarter hiring
-          </h1>
-        </div>
+  const hasActiveFilters =
+    filters.search ||
+    filters.location ||
+    filters.jobType ||
+    filters.workMode ||
+    filters.salaryRange ||
+    filters.techStacks.length > 0;
 
+  const cardStyle = {
+    backgroundColor: isDark ? UI.darkCard : UI.lightCard,
+    borderColor: isDark ? UI.darkCardBorder : UI.lightCardBorder,
+    boxShadow: isDark
+      ? "0 20px 48px rgba(0,0,0,0.28)"
+      : "0 16px 42px rgba(15,23,42,0.07)",
+  };
+
+  const inputTextColor = isDark ? UI.darkInputText : UI.lightInputText;
+  const lineColor = isDark ? UI.darkLine : UI.lightLine;
+
+  return (
+    <section className="font-sans">
+      <div
+        className="relative h-[86px] overflow-hidden max-md:h-[84px]"
+        style={{ backgroundColor: UI.heroBlue }}
+      >
+        <HeroPattern />
+
+        <div className="relative mx-auto flex h-full max-w-[1440px] flex-col justify-center px-[68px] max-xl:px-10 max-md:px-[24px]">
+          <h1 className="text-[22px] font-semibold leading-none tracking-[-0.03em] text-white max-md:text-[14px]">
+            Find your dream job
+          </h1>
+
+          <p className="mt-[13px] max-w-[520px] text-[11px] font-medium leading-none text-white max-md:mt-[9px] max-md:max-w-[225px] max-md:text-[9px] max-md:leading-[1.25]">
+            Connect talent with opportunity through smarter hiring
+          </p>
+        </div>
+      </div>
+
+      <div className="relative mx-auto w-full max-w-[1440px] px-[68px] max-xl:px-10 max-md:px-[24px]">
         <form
           onSubmit={handleSubmit}
-          className="-mt-6 overflow-visible rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60"
+          className="relative z-10 mx-auto mt-[20px] w-full max-w-[1260px] rounded-[12px] border px-[32px] pb-[18px] pt-[17px] max-md:mt-[28px] max-md:rounded-[10px] max-md:px-[15px] max-md:py-[16px]"
+          style={cardStyle}
         >
-          <div className="grid gap-0 lg:grid-cols-[1fr_1px_1fr_150px]">
-            <label className="flex items-center gap-4 px-5 py-5 md:px-6">
-              <FiSearch className="shrink-0 text-slate-400" size={23} />
+          <div className="grid grid-cols-[1fr_1px_1fr_86px] items-center max-md:block">
+            <label className="flex h-[38px] items-center gap-[15px] max-md:h-[36px]">
+              <FiSearch
+                size={16}
+                className="shrink-0"
+                style={{ color: UI.placeholder }}
+              />
               <input
                 name="search"
                 value={filters.search}
                 onChange={handleInputChange}
                 placeholder="Job title or keywords"
-                className="w-full bg-transparent text-[16px] font-normal text-[#585958] outline-none placeholder:text-slate-300"
+                className="w-full bg-transparent text-[14px] font-medium outline-none placeholder:text-[#B2AFBC] max-md:text-[12px]"
+                style={{ color: inputTextColor }}
               />
             </label>
 
-            <div className="hidden bg-slate-200 lg:block" />
+            <div
+              className="h-[38px] max-md:mt-[8px] max-md:h-px max-md:w-full"
+              style={{ backgroundColor: lineColor }}
+            />
 
-            <label className="flex items-center gap-4 border-t border-slate-100 px-5 py-5 md:px-6 lg:border-t-0">
-              <FiMapPin className="shrink-0 text-slate-400" size={23} />
+            <label className="flex h-[38px] items-center gap-[15px] pl-[30px] pr-[18px] max-md:h-[36px] max-md:pl-0 max-md:pr-0">
+              <FiMapPin
+                size={17}
+                className="shrink-0"
+                style={{ color: UI.placeholder }}
+              />
               <input
                 ref={locationInputRef}
                 name="location"
@@ -433,67 +610,132 @@ export default function JobSearchHero() {
                 onChange={handleInputChange}
                 placeholder="Anywhere"
                 autoComplete="off"
-                className="w-full bg-transparent text-[16px] font-normal text-[#585958] outline-none placeholder:text-slate-300"
+                className="w-full bg-transparent text-[14px] font-medium outline-none placeholder:text-[#B2AFBC] max-md:text-[12px]"
+                style={{ color: inputTextColor }}
               />
             </label>
 
-            <div className="px-4 py-4">
+            <div className="flex justify-end max-md:justify-center max-md:pt-[12px]">
               <button
                 type="submit"
-                className="h-full w-full rounded-xl bg-[#F7631E] px-6 py-3.5 text-[15px] font-medium text-white transition hover:bg-[#e85512]"
+                className="h-[36px] w-[80px] rounded-[6px] bg-[#F59E0B] text-[11px] font-semibold text-white shadow-[1px_1px_6.6px_rgba(0,0,0,0.09)] transition hover:bg-[#e89109] active:scale-[0.98] max-md:h-[38px] max-md:w-full max-md:text-[11px]"
               >
                 Search
               </button>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 px-4 py-4 md:px-5">
-            <span className="inline-flex items-center gap-2 text-sm font-normal text-[#585958]">
-              <FiSliders size={16} />
-              Filters:
-            </span>
+          <div
+            className="mt-[13px] h-px w-full max-md:hidden"
+            style={{ backgroundColor: lineColor }}
+          />
 
-            <SingleFilterDropdown
-              name="jobType"
-              value={filters.jobType}
-              options={FILTER_GROUPS.jobType}
-              onChange={updateFilter}
-            />
+          <div className="mt-[13px] flex items-center gap-[20px] max-md:hidden">
+            <div className="flex items-center gap-[16px]">
+              <SingleFilterDropdown
+                name="jobType"
+                value={filters.jobType}
+                options={FILTER_GROUPS.jobType}
+                onChange={updateFilter}
+                isDark={isDark}
+              />
 
-            <SingleFilterDropdown
-              name="workMode"
-              value={filters.workMode}
-              options={FILTER_GROUPS.workMode}
-              onChange={updateFilter}
-            />
+              <SingleFilterDropdown
+                name="workMode"
+                value={filters.workMode}
+                options={FILTER_GROUPS.workMode}
+                onChange={updateFilter}
+                isDark={isDark}
+                width="modality"
+              />
 
-            <MultiTechStackDropdown
-              selectedValues={filters.techStacks}
-              onChange={updateFilter}
-            />
+              <MultiTechStackDropdown
+                selectedValues={filters.techStacks}
+                onChange={updateFilter}
+                isDark={isDark}
+              />
 
-            <SingleFilterDropdown
-              name="salaryRange"
-              value={filters.salaryRange}
-              options={FILTER_GROUPS.salaryRange}
-              onChange={updateFilter}
-            />
+              <SingleFilterDropdown
+                name="salaryRange"
+                value={filters.salaryRange}
+                options={FILTER_GROUPS.salaryRange}
+                onChange={updateFilter}
+                isDark={isDark}
+                width="salary"
+              />
+            </div>
 
             <button
               type="button"
               onClick={handleClear}
-              className="ml-auto rounded-lg px-4 py-2.5 text-sm font-normal text-[#F7631E] transition hover:bg-orange-50"
+              className={`ml-auto rounded-[6px] px-[10px] py-[6px] text-[11px] font-semibold text-[#FB2C36] transition active:scale-[0.98] ${
+                hasActiveFilters ? "bg-[#FB2C36]/10" : "hover:bg-[#FB2C36]/10"
+              }`}
             >
               Clear
             </button>
-
-            {locationError ? (
-              <p className="basis-full text-xs font-normal text-orange-500">
-                {locationError}
-              </p>
-            ) : null}
           </div>
+
+          {showMobileFilters ? (
+            <div
+              className="hidden pt-[13px] max-md:grid max-md:grid-cols-2 max-md:gap-[8px]"
+              style={{
+                borderTop: `1px solid ${
+                  isDark ? "rgba(255,255,255,0.10)" : "#E0DEE6"
+                }`,
+              }}
+            >
+              <SingleFilterDropdown
+                name="jobType"
+                value={filters.jobType}
+                options={FILTER_GROUPS.jobType}
+                onChange={updateFilter}
+                isDark={isDark}
+              />
+
+              <SingleFilterDropdown
+                name="workMode"
+                value={filters.workMode}
+                options={FILTER_GROUPS.workMode}
+                onChange={updateFilter}
+                isDark={isDark}
+                width="modality"
+              />
+
+              <MultiTechStackDropdown
+                selectedValues={filters.techStacks}
+                onChange={updateFilter}
+                isDark={isDark}
+              />
+
+              <SingleFilterDropdown
+                name="salaryRange"
+                value={filters.salaryRange}
+                options={FILTER_GROUPS.salaryRange}
+                onChange={updateFilter}
+                isDark={isDark}
+                width="salary"
+              />
+
+              <button
+                type="button"
+                onClick={handleClear}
+                className="col-span-2 h-[32px] rounded-[5px] border border-[#FB2C36]/25 bg-[#FB2C36]/10 text-[11px] font-semibold text-[#FB2C36]"
+              >
+                Clear Filters
+              </button>
+            </div>
+          ) : null}
         </form>
+
+        <button
+          type="button"
+          onClick={() => setShowMobileFilters((current) => !current)}
+          className="mx-auto mt-[19px] hidden items-center gap-[7px] text-[10px] font-semibold text-[var(--text-muted)] max-md:flex"
+        >
+          <FiSliders size={12} />
+          {showMobileFilters ? "Hide Filters" : "More Filters"}
+        </button>
       </div>
     </section>
   );

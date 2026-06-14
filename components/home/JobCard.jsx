@@ -3,34 +3,37 @@
 import Link from "next/link";
 import { useState } from "react";
 import {
-  FiArrowRight,
+  FiBookmark,
   FiBriefcase,
   FiCheck,
   FiMapPin,
-  FiShare2,
 } from "react-icons/fi";
-import { MdVerified } from "react-icons/md";
 
-import MatchBadge from "@/components/common/MatchBadge";
+const CARD_COLORS = [
+  "#0152A4",
+  "#FF3347",
+  "#C92FE6",
+  "#F59E0B",
+  "#13C276",
+  "#89B6D6",
+  "#0152A4",
+  "#001D39",
+  "#FF3347",
+  "#13C276",
+];
 
-function getCompanyInitials(companyName = "JE") {
-  return companyName
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase())
-    .join("");
-}
-
-function getSkillTags(requiredSkills) {
-  if (!requiredSkills) return [];
-
-  return requiredSkills
-    .split(",")
-    .map((skill) => skill.trim())
-    .filter(Boolean)
-    .slice(0, 4);
-}
+const FALLBACK_JOB = {
+  id: null,
+  title: "Product Designer (UI UX)",
+  company_name: "Energizer LTD",
+  description:
+    "Design and iterate intuitive digital products that delight our users.",
+  job_type: "Full-Time",
+  location: "Kottawa, Sri Lanka",
+  created_at: null,
+  match_label: null,
+  match_score: null,
+};
 
 function getAppBaseUrl() {
   const envUrl = process.env.NEXT_PUBLIC_APP_URL;
@@ -46,79 +49,183 @@ function getAppBaseUrl() {
   return "";
 }
 
-function formatSalary(job) {
-  if (!job.salary_min && !job.salary_max) return null;
+function formatDate(value) {
+  if (!value) return "05/06/26";
 
-  if (job.salary_min && job.salary_max) {
-    return `LKR ${Number(job.salary_min).toLocaleString()} - ${Number(
-      job.salary_max
-    ).toLocaleString()}/month`;
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "05/06/26";
   }
 
-  if (job.salary_min) {
-    return `From LKR ${Number(job.salary_min).toLocaleString()}/month`;
-  }
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = String(date.getFullYear()).slice(-2);
 
-  return `Up to LKR ${Number(job.salary_max).toLocaleString()}/month`;
+  return `${day}/${month}/${year}`;
 }
 
 function formatJobType(jobType) {
-  if (!jobType) return "Job type not added";
+  if (!jobType) return "Full-Time";
 
-  return jobType
+  return String(jobType)
     .split("-")
     .map((word) => word[0]?.toUpperCase() + word.slice(1))
     .join("-");
 }
 
+function getCompanyName(job) {
+  return job.company_name || "Energizer LTD";
+}
+
+function getTitle(job) {
+  return job.title || "Product Designer (UI UX)";
+}
+
+function getDescription(job) {
+  const description = String(job.description || "").trim();
+
+  if (!description) {
+    return "Design and iterate intuitive digital products that delight our users.";
+  }
+
+  if (description.length <= 86) {
+    return description;
+  }
+
+  return `${description.slice(0, 86).trim()}...`;
+}
+
+function getFallbackMatch(colorIndex) {
+  if (colorIndex % 2 === 0) {
+    return {
+      label: "Strong Match",
+      score: 85,
+    };
+  }
+
+  return {
+    label: "Low Match",
+    score: 30,
+  };
+}
+
+function ButterflyLogo({ color }) {
+  return (
+    <span
+      className="relative grid h-[44px] w-[44px] shrink-0 place-items-center rounded-[8px] max-md:h-[40px] max-md:w-[40px] max-md:rounded-[7px]"
+      style={{ backgroundColor: color }}
+    >
+      <span className="relative h-[22px] w-[24px] max-md:h-[19px] max-md:w-[22px]">
+        <span className="absolute left-[1px] top-[2px] h-[12px] w-[10px] rounded-full bg-white max-md:h-[10px] max-md:w-[9px]" />
+        <span className="absolute right-[1px] top-[2px] h-[12px] w-[10px] rounded-full bg-white max-md:h-[10px] max-md:w-[9px]" />
+        <span className="absolute bottom-[1px] left-[5px] h-[9px] w-[8px] rounded-full bg-white max-md:left-[4px] max-md:h-[8px] max-md:w-[7px]" />
+        <span className="absolute bottom-[1px] right-[5px] h-[9px] w-[8px] rounded-full bg-white max-md:right-[4px] max-md:h-[8px] max-md:w-[7px]" />
+        <span
+          className="absolute left-[10px] top-[7px] h-[9px] w-[4px] bg-[#080808] max-md:left-[9px] max-md:top-[5px] max-md:h-[8px] max-md:w-[4px]"
+          style={{ borderRadius: "999px" }}
+        />
+      </span>
+    </span>
+  );
+}
+
+function MatchIcon() {
+  return (
+    <span className="inline-grid h-[13px] w-[13px] shrink-0 place-items-center">
+      <svg
+        viewBox="0 0 18 18"
+        className="h-[13px] w-[13px]"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M9 1.8L10.45 6.15L14.85 7.55L10.45 8.95L9 13.2L7.55 8.95L3.15 7.55L7.55 6.15L9 1.8Z"
+          stroke="#87DEB4"
+          strokeWidth="1.35"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M3.2 11.2L3.95 13.35L6.1 14.1L3.95 14.85L3.2 17L2.45 14.85L0.3 14.1L2.45 13.35L3.2 11.2Z"
+          stroke="#87DEB4"
+          strokeWidth="1"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M14.3 1L14.85 2.55L16.4 3.1L14.85 3.65L14.3 5.2L13.75 3.65L12.2 3.1L13.75 2.55L14.3 1Z"
+          stroke="#87DEB4"
+          strokeWidth="0.9"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
 function JobMetaItem({ icon, children }) {
   return (
-    <span className="inline-flex items-center gap-2 text-[16px] font-normal text-slate-500">
+    <span className="inline-flex min-w-0 items-center gap-[5px] whitespace-nowrap text-[10px] font-medium leading-none text-[var(--text-muted)] max-md:text-[9px]">
       {icon}
       {children}
     </span>
   );
 }
 
-function SalaryMetaItem({ children }) {
+function MatchPill({ label, score }) {
   return (
-    <span className="inline-flex items-center gap-2 text-[16px] font-normal text-slate-500">
-      <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-[#F7631E]">
-        LKR
-      </span>
-      {children}
+    <span className="inline-flex h-[23px] items-center gap-[6px] rounded-full bg-[#0F241F] px-[10px] text-[9px] font-semibold leading-none text-[#87DEB4] shadow-[inset_0_0_0_1px_rgba(135,222,180,0.10)] max-md:h-[21px] max-md:px-[8px] max-md:text-[8px]">
+      <MatchIcon />
+      {label} {score}%
     </span>
   );
 }
 
-export default function JobCard({ job }) {
+export default function JobCard({ job, colorIndex = 0 }) {
   const [shareStatus, setShareStatus] = useState("");
 
-  const jobDetailsPath = `/jobs/${job.id}`;
+  const safeJob = {
+    ...FALLBACK_JOB,
+    ...(job || {}),
+  };
+
+  const jobId = safeJob.id || safeJob.job_id || safeJob.slug || null;
+  const jobDetailsPath = jobId ? `/jobs/${jobId}` : "/jobs";
   const fullJobUrl = `${getAppBaseUrl()}${jobDetailsPath}`;
+  const companyName = getCompanyName(safeJob);
+  const title = getTitle(safeJob);
+  const description = getDescription(safeJob);
+  const iconColor = CARD_COLORS[colorIndex % CARD_COLORS.length];
 
-  const companyName = job.company_name || "AccDoo Company";
-  const logoText = getCompanyInitials(companyName);
-  const salary = formatSalary(job);
-  const skills = getSkillTags(job.required_skills);
-  const hasMatchScore =
-    job.match_score !== null && job.match_score !== undefined;
+  const fallbackMatch = getFallbackMatch(colorIndex);
+  const numericMatchScore = Number(safeJob.match_score);
 
-  async function handleShareJob() {
+  const matchScore =
+    safeJob.match_score !== null &&
+    safeJob.match_score !== undefined &&
+    !Number.isNaN(numericMatchScore)
+      ? Math.round(numericMatchScore)
+      : fallbackMatch.score;
+
+  const matchLabel = safeJob.match_label || fallbackMatch.label;
+
+  async function handleShareJob(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
     setShareStatus("");
 
     try {
       if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share({
-          title: job.title || "AccDoo job opportunity",
-          text: `${job.title || "Job opportunity"} at ${companyName}`,
+          title: title || "AccDoo job opportunity",
+          text: `${title || "Job opportunity"} at ${companyName}`,
           url: fullJobUrl,
         });
 
-        setShareStatus("Shared");
+        setShareStatus("Saved");
       } else if (navigator?.clipboard?.writeText) {
         await navigator.clipboard.writeText(fullJobUrl);
-        setShareStatus("Link copied");
+        setShareStatus("Copied");
       } else {
         const textArea = document.createElement("textarea");
         textArea.value = fullJobUrl;
@@ -131,115 +238,114 @@ export default function JobCard({ job }) {
         document.execCommand("copy");
         document.body.removeChild(textArea);
 
-        setShareStatus("Link copied");
+        setShareStatus("Copied");
       }
 
       window.setTimeout(() => {
         setShareStatus("");
-      }, 1800);
+      }, 1500);
     } catch {
-      setShareStatus("Copy failed");
+      setShareStatus("Failed");
 
       window.setTimeout(() => {
         setShareStatus("");
-      }, 1800);
+      }, 1500);
     }
   }
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-7 font-sans shadow-sm transition hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/70">
-      <div className="grid gap-7 lg:grid-cols-[1fr_auto]">
-        <div className="flex gap-5">
-          <Link
-            href={jobDetailsPath}
-            className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-[#F9FBFB] text-lg font-medium text-[#0C203A] ring-1 ring-slate-200 transition hover:bg-slate-100"
-          >
-            {logoText}
-          </Link>
+    <article className="group relative h-[176px] rounded-[10px] border border-transparent bg-[var(--card-bg)] shadow-[var(--shadow-card)] transition duration-200 hover:-translate-y-[1px] hover:border-[#155DFC] hover:ring-1 hover:ring-[#155DFC]/20 hover:shadow-[0_0_40.5px_rgba(0,0,0,0.08)] dark:hover:border-[#4CA5FF] max-md:h-[162px] max-md:rounded-[9px]">
+      <Link
+        href={jobDetailsPath}
+        className="flex h-full flex-col px-[16px] pb-[13px] pt-[16px] max-md:px-[13px] max-md:pb-[11px] max-md:pt-[13px]"
+      >
+        <div className="flex items-start gap-[15px] max-md:gap-[11px]">
+          <ButterflyLogo color={iconColor} />
 
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-3">
-              <Link
-                href={jobDetailsPath}
-                className="text-[23px] font-medium leading-tight tracking-tight text-[#0C203A] transition hover:text-[#F7631E]"
-              >
-                {job.title || "Untitled role"}
-              </Link>
+          <div className="min-w-0 flex-1 pt-[1px]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="truncate text-[14px] font-bold leading-[1.15] tracking-[-0.02em] text-[var(--text-main)] max-md:text-[12px]">
+                  {title}
+                </h2>
 
-              {hasMatchScore ? (
-                <MatchBadge
-                  score={job.match_score}
-                  label={job.match_label}
-                />
-              ) : null}
-            </div>
+                <p className="mt-[5px] text-[11px] font-bold leading-none text-[#13C276] max-md:mt-[4px] max-md:text-[9px]">
+                  {companyName}
+                </p>
+              </div>
 
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <p className="text-[17px] font-normal text-[#2b7a66]">
-                {companyName}
-              </p>
-              <MdVerified size={18} className="text-[#2b7a66]" />
-            </div>
-
-            <p className="mt-5 text-[16px] font-normal text-[#0C203A]">
-              {skills.length ? skills.join(" · ") : "Role details available"}
-            </p>
-
-            {hasMatchScore && job.match_summary ? (
-              <p className="mt-3 line-clamp-2 max-w-3xl text-sm font-normal leading-6 text-slate-500">
-                {job.match_summary}
-              </p>
-            ) : null}
-
-            <div className="mt-5 flex flex-wrap gap-x-7 gap-y-3">
-              <JobMetaItem icon={<FiBriefcase size={18} />}>
-                {formatJobType(job.job_type)}
-              </JobMetaItem>
-
-              <JobMetaItem icon={<FiMapPin size={18} />}>
-                {job.location || "Location not added"}
-              </JobMetaItem>
-
-              {salary ? <SalaryMetaItem>{salary}</SalaryMetaItem> : null}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col items-start justify-between gap-8 lg:items-end">
-          <div className="flex items-center gap-6">
-            <div className="relative">
               <button
                 type="button"
                 onClick={handleShareJob}
-                className="inline-flex items-center gap-2 text-[16px] font-medium text-[#0C203A] transition hover:text-[#F7631E]"
+                className="grid h-[28px] w-[28px] shrink-0 place-items-center rounded-full bg-black/[0.035] text-[#A8B0BE] transition hover:bg-[#155DFC]/10 hover:text-[#155DFC] dark:bg-white/[0.05] dark:text-[#5F6878] max-md:h-[24px] max-md:w-[24px]"
+                aria-label="Save job"
               >
-                {shareStatus === "Link copied" || shareStatus === "Shared" ? (
-                  <FiCheck size={18} />
+                {shareStatus === "Copied" || shareStatus === "Saved" ? (
+                  <FiCheck size={14} className="max-md:h-[12px] max-md:w-[12px]" />
                 ) : (
-                  <FiShare2 size={18} />
+                  <FiBookmark size={14} className="max-md:h-[12px] max-md:w-[12px]" />
                 )}
-                {shareStatus || "Share"}
               </button>
-
-              {shareStatus === "Copy failed" ? (
-                <p className="absolute right-0 top-[28px] whitespace-nowrap rounded-lg border border-red-100 bg-red-50 px-2 py-1 text-xs font-normal text-red-600">
-                  Could not copy
-                </p>
-              ) : null}
             </div>
 
-            <Link
-              href={jobDetailsPath}
-              className="inline-flex items-center gap-2 text-[16px] font-medium text-[#F7631E] transition hover:text-[#e85512]"
-            >
-              Apply
-              <FiArrowRight size={18} />
-            </Link>
+            <div className="mt-[8px]">
+              <MatchPill label={matchLabel} score={matchScore} />
+            </div>
           </div>
-
-          <p className="text-sm font-normal text-slate-400">Open now</p>
         </div>
-      </div>
+
+        <div className="mb-[8px] mt-[18px] flex flex-1 items-start justify-between gap-4 max-md:mb-[7px] max-md:mt-[11px] max-md:gap-3">
+          <p className="line-clamp-2 max-w-[260px] text-[10px] font-medium leading-[1.32] text-[var(--text-muted)] max-md:max-w-[170px] max-md:text-[9px] max-md:leading-[1.35]">
+            {description}
+          </p>
+
+          <span className="mt-[1px] grid h-[30px] min-w-[68px] place-items-center rounded-[5px] bg-[#155DFC] text-[11px] font-semibold text-white shadow-[1px_1px_6.6px_rgba(0,0,0,0.09)] transition group-hover:bg-[#014FE0] max-md:h-[26px] max-md:min-w-[55px] max-md:text-[9px]">
+            Apply
+          </span>
+        </div>
+
+        <div className="mt-auto border-t border-[var(--line-soft)] pt-[14px] max-md:pt-[11px]">
+          <div className="flex items-center justify-between gap-[10px]">
+            <div className="flex min-w-0 flex-1 items-center gap-[14px] max-md:gap-[10px]">
+              <JobMetaItem
+                icon={
+                  <FiBriefcase
+                    size={11}
+                    className="shrink-0 max-md:h-[9px] max-md:w-[9px]"
+                  />
+                }
+              >
+                {formatJobType(safeJob.job_type)}
+              </JobMetaItem>
+
+              <JobMetaItem
+                icon={
+                  <FiMapPin
+                    size={11}
+                    className="shrink-0 max-md:h-[9px] max-md:w-[9px]"
+                  />
+                }
+              >
+                <span className="max-w-[120px] truncate max-md:max-w-[90px]">
+                  {safeJob.location || "Kottawa, Sri Lanka"}
+                </span>
+              </JobMetaItem>
+            </div>
+
+            <span className="shrink-0 whitespace-nowrap text-[10px] font-medium leading-none text-[var(--text-muted)] max-md:text-[9px]">
+              <span className="hidden md:inline">Posted on </span>
+              <span className="md:hidden">On </span>
+              {formatDate(safeJob.created_at)}
+            </span>
+          </div>
+        </div>
+      </Link>
+
+      {shareStatus ? (
+        <div className="absolute right-[18px] top-[48px] rounded-[5px] border border-[var(--line-soft)] bg-[var(--surface-bg)] px-2 py-1 text-[10px] font-semibold text-[var(--text-main)] shadow-lg max-md:right-[12px] max-md:top-[42px]">
+          {shareStatus}
+        </div>
+      ) : null}
     </article>
   );
 }
