@@ -3,6 +3,7 @@ import JobSearchHero from "@/components/home/JobSearchHero";
 import JobsList from "@/components/home/JobsList";
 import Footer from "@/components/home/Footer";
 
+
 export const metadata = {
   title: "Source, Hire, Onboard & Manage People | Jobs in Sri Lanka",
   description:
