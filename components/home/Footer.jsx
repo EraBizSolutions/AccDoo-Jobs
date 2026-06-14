@@ -1,10 +1,13 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { BsBriefcaseFill } from "react-icons/bs";
+import { FiChevronDown } from "react-icons/fi";
 
 const footerGroups = [
   {
-    title: "AccDoo",
-    links: ["Jobs", "For Businesses", "Company", "Resources"],
+    title: "Accdoo",
+    links: ["Jobs", "For Business", "Company", "Resources"],
   },
   {
     title: "Audience",
@@ -12,7 +15,7 @@ const footerGroups = [
   },
   {
     title: "Product",
-    links: ["Pricing", "Features", "Integrations", "FAQ"],
+    links: ["Pricing", "Features", "Integrations", "FAQs"],
   },
   {
     title: "Help",
@@ -20,47 +23,79 @@ const footerGroups = [
   },
   {
     title: "Legal",
-    links: ["Terms of Service", "Privacy Policy", "GDPR"],
+    links: ["Terms of Services", "Privacy Policy", "GDPR"],
   },
 ];
 
+function AccDooFooterLogo() {
+  return (
+    <Link href="/" className="inline-flex items-center">
+      <img
+        src="/accdoo-logo.svg"
+        alt="AccDoo"
+        className="h-[28px] w-auto object-contain brightness-0 invert max-md:h-[22px]"
+      />
+    </Link>
+  );
+}
+
+function MobileFooterGroup({ group }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="border-b border-white/15">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex w-full items-center justify-between py-[18px] text-left text-[12px] font-bold text-white"
+      >
+        {group.title}
+        <FiChevronDown
+          size={15}
+          className={`transition ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open ? (
+        <ul className="space-y-[11px] pb-[16px]">
+          {group.links.map((item) => (
+            <li key={`${group.title}-${item}`}>
+              <Link
+                href="/"
+                className="text-[11px] font-medium text-white/70 transition hover:text-white"
+              >
+                {item}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 export default function Footer() {
   return (
-    <footer className="bg-[#1D554C] px-6 pt-14 font-sans text-white lg:px-8">
-      <div className="mx-auto max-w-36.2517.5pxxl">
-        <div className="flex flex-col gap-6 border-b border-white/30 pb-10 md:flex-row md:items-center md:justify-between">
-          <Link
-            href="/"
-            className="flex items-center gap-3 text-3xl font-semibold text-white"
-          >
-            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-[#F7631E]">
-              <BsBriefcaseFill size={18} />
-            </span>
-            AccDoo
-          </Link>
-
-          <p className="text-base font-normal text-white/70">
-            1 Bank of Ceylon Mawatha, Colombo 00100
-          </p>
+    <footer className="bg-[#0152A4] px-[78px] pt-[46px] font-sans text-white max-xl:px-10 max-md:px-4 max-md:pt-[30px]">
+      <div className="mx-auto w-full max-w-[1100px]">
+        <div className="pb-[58px] max-md:pb-[28px]">
+          <AccDooFooterLogo />
         </div>
 
-        <div className="grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="hidden grid-cols-5 gap-[80px] pb-[52px] md:grid">
           {footerGroups.map((group) => (
             <div key={group.title}>
-              <h3 className="text-xl font-semibold text-white">{group.title}</h3>
+              <h3 className="text-[12px] font-bold text-white">{group.title}</h3>
 
-              <ul className="mt-6 space-y-4">
-                {group.links.map((item, index) => (
-                  <li key={item}>
-                    <span
-                      className={`text-base font-normal ${
-                        index === 0 && group.title === "AccDoo"
-                          ? "text-[#F7631E]"
-                          : "text-white/60"
-                      }`}
+              <ul className="mt-[20px] space-y-[13px]">
+                {group.links.map((item) => (
+                  <li key={`${group.title}-${item}`}>
+                    <Link
+                      href="/"
+                      className="text-[12px] font-medium text-white/65 transition hover:text-white"
                     >
                       {item}
-                    </span>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -68,16 +103,32 @@ export default function Footer() {
           ))}
         </div>
 
-        <div className="border-t border-white/10 py-7 text-center text-sm font-normal text-white/55">
-          © 2026 AccDoo. Built by{" "}
-          <a
-            href="https://erabiz.io"
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium text-white transition hover:text-[#F7631E]"
-          >
-            Erabiz.io
-          </a>
+        <div className="md:hidden">
+          {footerGroups.map((group) => (
+            <MobileFooterGroup key={group.title} group={group} />
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between border-t border-white/20 py-[24px] max-md:mt-[54px] max-md:flex-col max-md:gap-[18px] max-md:py-[27px]">
+          <p className="text-[12px] font-medium text-white/75 max-md:text-[11px]">
+            © accdoo.jobs 2026
+          </p>
+
+          <div className="flex items-center gap-[28px]">
+            <Link
+              href="/"
+              className="text-[12px] font-medium text-white transition hover:text-white/75 max-md:text-[11px]"
+            >
+              Terms of service
+            </Link>
+
+            <Link
+              href="/"
+              className="text-[12px] font-medium text-white transition hover:text-white/75 max-md:text-[11px]"
+            >
+              Privacy policy
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
