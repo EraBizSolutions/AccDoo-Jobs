@@ -1,4 +1,4 @@
-import Navbar from "@/components/home/Navbar";
+import Navbar from "@/components/common/Navbar";
 import AnalyzingCard from "@/components/candidate/AnalyzingCard";
 
 export const metadata = {

@@ -20,8 +20,8 @@ import { LuSparkles } from "react-icons/lu";
 
 import MatchBadge from "@/components/common/MatchBadge";
 import ApplyJobModal from "@/components/candidate/ApplyJobModal";
-import Footer from "@/components/home/Footer";
-import Navbar from "@/components/home/Navbar";
+import Footer from "@/components/common/Footer";
+import Navbar from "@/components/common/Navbar";
 import {
   getPublicJobDetails,
   getPublicJobQuestions,

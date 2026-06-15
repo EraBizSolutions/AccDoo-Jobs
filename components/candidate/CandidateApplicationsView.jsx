@@ -18,8 +18,8 @@ import {
 import { LuSparkles } from "react-icons/lu";
 
 import SecureCvButton from "@/components/common/SecureCvButton";
-import Footer from "@/components/home/Footer";
-import Navbar from "@/components/home/Navbar";
+import Footer from "@/components/common/Footer";
+import Navbar from "@/components/common/Navbar";
 import { listMyCandidateApplications } from "@/lib/api/applicationsApi";
 import { getAccessToken } from "@/lib/utils/tokenStorage";
 

@@ -1,7 +1,7 @@
-import Navbar from "@/components/home/Navbar";
+import Navbar from "@/components/common/Navbar";
 import JobSearchHero from "@/components/home/JobSearchHero";
 import JobsList from "@/components/home/JobsList";
-import Footer from "@/components/home/Footer";
+import Footer from "@/components/common/Footer";
 
 export const metadata = {
   title: "Source, Hire, Onboard & Manage People | Jobs in Sri Lanka",

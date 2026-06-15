@@ -9,6 +9,11 @@ const poppins = Poppins({
 export const metadata = {
   title: "AccDoo | AI Job Platform",
   description: "AI-powered job discovery and hiring platform.",
+  icons: {
+    icon: "/accdoo-favicon.png",
+    shortcut: "/accdoo-favicon.png",
+    apple: "/accdoo-favicon.png",
+  },
 };
 
 export default function RootLayout({ children }) {

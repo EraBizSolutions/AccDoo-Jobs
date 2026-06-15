@@ -13,8 +13,8 @@ import {
 } from "react-icons/fi";
 import { LuSparkles } from "react-icons/lu";
 
-import Footer from "@/components/home/Footer";
-import Navbar from "@/components/home/Navbar";
+import Footer from "@/components/common/Footer";
+import Navbar from "@/components/common/Navbar";
 import {
   activateCandidateProfile,
   getMyCandidateProfile,
