@@ -186,7 +186,7 @@ export default function JobCard({ job, colorIndex = 0 }) {
 
   const jobId = safeJob.id || safeJob.job_id || safeJob.slug || null;
   const jobDetailsPath = jobId ? `/jobs/${jobId}` : "/jobs";
-  const fullJobUrl = `${getAppBaseUrl()}${jobDetailsPath}`;
+  const fullJobUrl = safeJob.public_url || `${getAppBaseUrl()}${jobDetailsPath}`;
   const companyName = getCompanyName(safeJob);
   const title = getTitle(safeJob);
   const description = getDescription(safeJob);

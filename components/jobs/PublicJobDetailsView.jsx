@@ -35,6 +35,7 @@ import {
   getCandidateProfileCompletionIssues,
   isCandidateProfileComplete,
 } from "@/lib/utils/candidateProfileRules";
+import { isExpiredJob } from "@/lib/seo/jobSeo";
 
 function getCompanyInitials(companyName = "AD") {
   return companyName
@@ -494,18 +495,18 @@ function ApplyButton({
   );
 }
 
-export default function PublicJobDetailsView() {
+export default function PublicJobDetailsView({ initialJob = null }) {
   const params = useParams();
   const router = useRouter();
 
   const jobId = params.jobId;
 
-  const [job, setJob] = useState(null);
+  const [job, setJob] = useState(initialJob);
   const [questions, setQuestions] = useState([]);
   const [candidateProfile, setCandidateProfile] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialJob);
   const [isPreparingApply, setIsPreparingApply] = useState(false);
   const [shareStatus, setShareStatus] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -516,7 +517,7 @@ export default function PublicJobDetailsView() {
   const companyInitials = getCompanyInitials(companyName);
   const skills = getSkillTags(job?.required_skills);
   const sections = buildDescriptionSections(job?.description);
-  const fullJobUrl = `${getAppBaseUrl()}/jobs/${jobId}`;
+  const fullJobUrl = job?.public_url || `${getAppBaseUrl()}/jobs/${jobId}`;
 
   const isOwnPostedJob =
     Boolean(currentUser?.id) &&
@@ -525,17 +526,23 @@ export default function PublicJobDetailsView() {
 
   const hasMatchScore =
     job?.match_score !== null && job?.match_score !== undefined;
+  const hasExpired = isExpiredJob(job);
 
   useEffect(() => {
-    const storedUser = getStoredUser();
-    setCurrentUser(storedUser);
+    queueMicrotask(() => {
+      setCurrentUser(getStoredUser());
+    });
 
     async function loadJobPageData() {
       setErrorMessage("");
 
       try {
+        const jobRequest = initialJob
+          ? Promise.resolve(initialJob)
+          : getPublicJobDetails(jobId);
+
         const [jobData, questionData] = await Promise.all([
-          getPublicJobDetails(jobId),
+          jobRequest,
           getPublicJobQuestions(jobId).catch(() => []),
         ]);
 
@@ -560,7 +567,7 @@ export default function PublicJobDetailsView() {
     if (jobId) {
       loadJobPageData();
     }
-  }, [jobId]);
+  }, [initialJob, jobId]);
 
   async function handleShareJob() {
     setShareStatus("");
@@ -813,6 +820,13 @@ export default function PublicJobDetailsView() {
                 >
                   {applyStatusMessage}
                 </p>
+              ) : null}
+
+              {hasExpired ? (
+                <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-normal text-amber-800">
+                  This job posting has expired. You can still review the role,
+                  but applications may no longer be accepted.
+                </div>
               ) : null}
             </section>
 
