@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import JobCard from "@/components/home/JobCard";
+import { homeInter } from "@/components/home/homeFonts";
 import { listPublicActiveJobs } from "@/lib/api/jobsApi";
 import { getStoredUser } from "@/lib/utils/tokenStorage";
 
@@ -215,9 +216,9 @@ function sortJobs(jobs, sortMode) {
 
 function CardSkeleton() {
   return (
-    <div className="h-[136px] rounded-[10px] bg-[var(--card-bg)] shadow-[var(--shadow-card)] max-md:h-[150px]">
-      <div className="flex h-full animate-pulse gap-4 p-[16px]">
-        <div className="h-[44px] w-[44px] rounded-[8px] bg-black/10 dark:bg-white/10" />
+    <div className="h-44 rounded-2xl bg-card shadow-card max-md:h-37.5 max-md:rounded-[10px]">
+      <div className="flex h-full animate-pulse gap-4 p-4">
+        <div className="h-11 w-11 rounded-lg bg-black/10 dark:bg-white/10" />
         <div className="flex-1 space-y-3">
           <div className="h-4 w-2/3 rounded bg-black/10 dark:bg-white/10" />
           <div className="h-3 w-1/3 rounded bg-black/10 dark:bg-white/10" />
@@ -255,10 +256,10 @@ export default function JobsList() {
   }
 
   useEffect(() => {
-    const storedUser = getStoredUser();
-
-    setCurrentUser(storedUser);
-    loadJobs();
+    queueMicrotask(() => {
+      setCurrentUser(getStoredUser());
+      loadJobs();
+    });
 
     function handleAuthUpdate() {
       setCurrentUser(getStoredUser());
@@ -315,18 +316,18 @@ export default function JobsList() {
   }
 
   return (
-    <section className="px-[78px] pb-[74px] pt-[20px] font-sans max-xl:px-10 max-md:px-[32px] max-md:pb-[44px] max-md:pt-[28px]">
-      <div className="mx-auto w-full max-w-[1260px]">
-        <div className="mb-[28px] flex h-[52px] items-center justify-between rounded-[7px] bg-[var(--surface-bg)] px-[32px] shadow-[0_10px_30px_rgba(15,23,42,0.055)] ring-1 ring-black/[0.025] max-md:h-auto max-md:flex-col max-md:gap-[28px] max-md:bg-transparent max-md:px-0 max-md:shadow-none max-md:ring-0">
+    <section className={`px-17 pb-18.5 pt-5 max-xl:px-10 max-md:px-6 max-md:pb-11 max-md:pt-7 ${homeInter.className}`}>
+      <div className="mx-auto w-full max-w-315">
+        <div className="mb-7 flex h-17 items-center justify-between rounded-[7px] bg-surface px-12 shadow-sort-bar ring-1 ring-black/2.5 max-md:h-auto max-md:flex-col max-md:gap-11 max-md:bg-transparent max-md:px-0 max-md:shadow-none max-md:ring-0">
           <div className="order-1 max-md:order-2 max-md:text-center">
-            <p className="text-[12px] font-medium text-[var(--text-muted)] max-md:text-[13px]">
+            <p className="text-[14px] font-medium leading-none text-gray-800 dark:text-slate-300 max-md:text-[13px]">
               {isLoading
                 ? "Loading opportunities..."
                 : `${sortedJobs.length} active opportunities`}
             </p>
           </div>
 
-          <div className="order-2 flex items-center justify-center gap-[4px] rounded-[6px] bg-[var(--surface-bg)] p-[4px] shadow-[0_10px_28px_rgba(15,23,42,0.08)] max-md:order-1 max-md:mx-auto max-md:w-fit">
+          <div className="order-2 flex items-center justify-center gap-2 max-md:order-1 max-md:mx-auto max-md:grid max-md:w-full max-md:max-w-88 max-md:grid-cols-[1.5fr_1fr_1fr] max-md:gap-3">
             {SORT_TABS.map((tab) => {
               const isActive = sortMode === tab.value;
 
@@ -335,10 +336,10 @@ export default function JobsList() {
                   key={tab.value}
                   type="button"
                   onClick={() => handleSortChange(tab.value)}
-                  className={`h-[32px] whitespace-nowrap rounded-[5px] px-[18px] text-[11px] font-semibold transition active:scale-[0.98] max-md:h-[34px] max-md:px-[18px] max-md:text-[11px] ${
+                  className={`h-10.25 min-w-0 whitespace-nowrap rounded-sort text-[14px] font-semibold leading-none transition active:scale-98 max-md:h-11 max-md:w-full max-md:px-2 max-md:text-[12px] ${
                     isActive
-                      ? "bg-[#2563FF] text-white shadow-[0_8px_18px_rgba(37,99,255,0.25)]"
-                      : "text-[var(--text-muted)] hover:bg-[#2563FF]/10 hover:text-[#2563FF]"
+                      ? "w-35.25 bg-secondary-blue p-2.5 text-white shadow-sort-active max-md:px-3 max-md:py-0"
+                      : "px-6 text-text-muted hover:bg-secondary-blue/10 hover:text-secondary-blue max-md:px-1"
                   }`}
                 >
                   {tab.label}
@@ -357,7 +358,7 @@ export default function JobsList() {
             <button
               type="button"
               onClick={loadJobs}
-              className="mt-3 h-[34px] rounded-[6px] bg-red-600 px-4 text-[12px] font-semibold text-white"
+              className="mt-3 h-8.5 rounded-md bg-red-600 px-4 text-[12px] font-semibold text-white"
             >
               Retry loading jobs
             </button>
@@ -365,13 +366,13 @@ export default function JobsList() {
         ) : null}
 
         {isLoading ? (
-          <div className="mx-auto grid max-w-[980px] grid-cols-2 gap-x-[42px] gap-y-[22px] max-md:grid-cols-1 max-md:gap-y-[12px]">
+          <div className="mx-auto grid max-w-245 grid-cols-2 gap-x-10.5 gap-y-5.5 max-md:grid-cols-1 max-md:gap-y-3">
             {Array.from({ length: 8 }).map((_, index) => (
               <CardSkeleton key={`job-skeleton-${index}`} />
             ))}
           </div>
         ) : visibleJobs.length ? (
-          <div className="mx-auto grid max-w-[980px] grid-cols-2 gap-x-[42px] gap-y-[22px] max-md:grid-cols-1 max-md:gap-y-[12px]">
+          <div className="mx-auto grid max-w-245 grid-cols-2 gap-x-10.5 gap-y-5.5 max-md:grid-cols-1 max-md:gap-y-3">
             {visibleJobs.map((job, index) => (
               <JobCard
                 key={job.id}
@@ -382,36 +383,36 @@ export default function JobsList() {
             ))}
           </div>
         ) : !errorMessage ? (
-          <div className="rounded-[13px] border border-[var(--line-soft)] bg-[var(--card-bg)] px-8 py-10 text-center shadow-[var(--shadow-card)]">
-            <p className="text-[16px] font-semibold text-[var(--text-main)]">
+          <div className="rounded-[13px] border border-line-soft bg-card px-8 py-10 text-center shadow-card">
+            <p className="text-[16px] font-semibold text-text-main">
               No matching jobs found.
             </p>
 
-            <p className="mt-2 text-[13px] font-medium text-[var(--text-muted)]">
+            <p className="mt-2 text-[13px] font-medium text-text-muted">
               Try changing your search keywords, location, or filters.
             </p>
           </div>
         ) : null}
 
         {!isLoading && visibleJobs.length && hasMoreJobs ? (
-          <div className="mt-[54px] flex flex-col items-center justify-center gap-[10px] max-md:mt-[34px]">
+          <div className="mt-13.5 flex flex-col items-center justify-center gap-2.5 max-md:mt-8.5">
             <button
               type="button"
               onClick={handleLoadMore}
-              className="h-[36px] rounded-[5px] border border-[#BFC7D4] bg-[var(--surface-bg)] px-[22px] text-[12px] font-bold text-[var(--text-main)] shadow-sm transition hover:border-[#0152A4] hover:text-[#0152A4] active:scale-[0.98] dark:border-white/25"
+              className="h-9 rounded-[5px] border border-load-border bg-surface px-5.5 text-[12px] font-bold text-text-main shadow-sm transition hover:border-accdoo-primary hover:text-accdoo-primary active:scale-98 dark:border-white/25"
             >
               Load More
             </button>
 
-            <p className="text-[10px] font-semibold text-[var(--text-soft)]">
+            <p className="text-[10px] font-semibold text-text-soft">
               {hiddenJobsCount} more job{hiddenJobsCount === 1 ? "" : "s"} available
             </p>
           </div>
         ) : null}
 
         {!isLoading && visibleJobs.length && !hasMoreJobs ? (
-          <div className="mt-[54px] flex justify-center max-md:mt-[34px]">
-            <p className="rounded-[5px] border border-[#BFC7D4] px-[18px] py-[10px] text-[12px] font-semibold text-[var(--text-muted)] dark:border-white/25">
+          <div className="mt-13.5 flex justify-center max-md:mt-8.5">
+            <p className="rounded-[5px] border border-load-border px-4.5 py-2.5 text-[12px] font-semibold text-text-muted dark:border-white/25">
               All jobs loaded
             </p>
           </div>

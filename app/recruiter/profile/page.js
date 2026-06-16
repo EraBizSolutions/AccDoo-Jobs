@@ -15,7 +15,7 @@ import {
 } from "react-icons/fi";
 import { LuSparkles } from "react-icons/lu";
 
-import Navbar from "@/components/home/Navbar";
+import Navbar from "@/components/common/Navbar";
 import {
   activateRecruiterProfile,
   getMyRecruiterProfile,
