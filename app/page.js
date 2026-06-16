@@ -1,21 +1,21 @@
-import Navbar from "@/components/home/Navbar";
+import Navbar from "@/components/common/Navbar";
 import JobSearchHero from "@/components/home/JobSearchHero";
 import JobsList from "@/components/home/JobsList";
-import Footer from "@/components/home/Footer";
+import Footer from "@/components/common/Footer";
 
 export const metadata = {
-  title: "Source, Hire, Onboard & Manage People | Jobs in Sri Lanka",
+  title: "Jobs in Sri Lanka | Find Work & Hire Talent | accdoo.jobs",
   description:
-    "AccDoo Jobs helps businesses source, hire, onboard, and manage people, while helping job seekers find trusted jobs in Sri Lanka",
+    "Find trusted jobs in Sri Lanka with AccDoo Jobs. Discover better roles, apply online, and help employers hire the right talent faster.",
   alternates: {
     canonical: "https://www.accdoo.jobs",
   },
   openGraph: {
     type: "website",
     url: "https://www.accdoo.jobs",
-    title: "Source, Hire, Onboard & Manage People | Jobs in Sri Lanka",
+    title: "Jobs in Sri Lanka | Find Work & Hire Talent | accdoo.jobs",
     description:
-      "AccDoo Jobs helps businesses source, hire, onboard, and manage people, while helping job seekers find trusted jobs in Sri Lanka",
+      "Find trusted jobs in Sri Lanka with AccDoo Jobs. Discover better roles, apply online, and help employers hire the right talent faster.",
     siteName: "AccDoo Jobs",
     images: [
       {
@@ -28,9 +28,9 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Source, Hire, Onboard & Manage People | Jobs in Sri Lanka",
+    title: "Jobs in Sri Lanka | Find Work & Hire Talent | accdoo.jobs",
     description:
-      "AccDoo Jobs helps businesses source, hire, onboard, and manage people, while helping job seekers find trusted jobs in Sri Lanka",
+      "Find trusted jobs in Sri Lanka with AccDoo Jobs. Discover better roles, apply online, and help employers hire the right talent faster.",
     images: ["https://www.accdoo.jobs/accdoo-logo.svg"],
   },
 };

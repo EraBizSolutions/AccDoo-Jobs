@@ -1,3 +1,5 @@
+import { permanentRedirect } from "next/navigation";
+
 import PublicJobDetailsView from "@/components/jobs/PublicJobDetailsView";
 import { getPublicJobDetails } from "@/lib/api/jobsApi";
 import {
@@ -5,15 +7,10 @@ import {
   buildJobMetadata,
   buildJobPostingSchema,
   getCanonicalJobUrl,
+  getJobSlug,
 } from "@/lib/seo/jobSeo";
 
 export const revalidate = 300;
-
-const fallbackMetadata = {
-  title: "Job Opportunity | accdoo.jobs",
-  description:
-    "Explore this job opportunity on accdoo.jobs and apply online today.",
-};
 
 async function getJobForSeo(jobId) {
   try {
@@ -29,7 +26,9 @@ export async function generateMetadata({ params }) {
 
   if (!job) {
     return {
-      ...fallbackMetadata,
+      title: "Job Opportunity | accdoo.jobs",
+      description:
+        "Explore this job opportunity on accdoo.jobs and apply online today.",
       alternates: {
         canonical: getCanonicalJobUrl(jobId),
       },
@@ -39,9 +38,18 @@ export async function generateMetadata({ params }) {
   return buildJobMetadata(job, jobId);
 }
 
-export default async function PublicJobDetailsPage({ params }) {
-  const { jobId } = await params;
+export default async function PublicJobDetailsSlugPage({ params }) {
+  const { jobId, slug } = await params;
   const initialJob = await getJobForSeo(jobId);
+
+  if (initialJob) {
+    const canonicalSlug = initialJob.slug || getJobSlug(initialJob);
+
+    if (slug !== canonicalSlug) {
+      permanentRedirect(`/jobs/${jobId}/${canonicalSlug}`);
+    }
+  }
+
   const schemas = [
     buildJobPostingSchema(initialJob, jobId),
     initialJob ? buildBreadcrumbSchema(initialJob, jobId) : null,

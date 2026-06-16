@@ -8,12 +8,14 @@ import {
   FiChevronDown,
   FiLogOut,
   FiMenu,
-  FiMoon,
-  FiSun,
   FiUser,
   FiX,
 } from "react-icons/fi";
 
+import HomeLogo from "@/components/common/HomeLogo";
+import ProfileAvatar from "@/components/common/ProfileAvatar";
+import ThemeToggle from "@/components/common/ThemeToggle";
+import { homeInter } from "@/components/home/homeFonts";
 import { getCurrentUser } from "@/lib/api/authApi";
 import {
   clearAuthData,
@@ -24,72 +26,22 @@ import {
 
 const THEME_STORAGE_KEY = "accdoo-theme-mode";
 
-function AccDooLogo({ isDark = false }) {
-  return (
-    <Link href="/" className="inline-flex items-center" aria-label="AccDoo home">
-      <img
-        src="/accdoo-logo.svg"
-        alt="AccDoo"
-        className={`h-[24px] w-auto object-contain max-md:h-[18px] ${
-          isDark ? "brightness-0 invert" : ""
-        }`}
-      />
-    </Link>
-  );
-}
-
-function ProfileAvatar({ user }) {
-  const firstLetter =
-    user?.name?.trim()?.charAt(0)?.toUpperCase() ||
-    user?.email?.trim()?.charAt(0)?.toUpperCase() ||
-    "K";
-
-  return (
-    <span className="grid h-full w-full place-items-center overflow-hidden rounded-full bg-[#D8E8FF] text-[12px] font-semibold text-[#0152A4]">
-      {firstLetter}
-    </span>
-  );
-}
-
-function ThemeToggle({ theme, onToggle }) {
-  const isDark = theme === "dark";
-
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-label="Toggle dark mode"
-      className={`relative inline-flex h-[23px] w-[48px] items-center rounded-full border p-[2px] transition ${
-        isDark
-          ? "border-white/10 bg-[#111827]"
-          : "border-[#D7DFEA] bg-[#EDF3FB]"
-      }`}
-    >
-      <span
-        className={`grid h-[17px] w-[17px] place-items-center rounded-full bg-[#155DFC] text-white shadow-sm transition-transform duration-200 ${
-          isDark ? "translate-x-[25px]" : "translate-x-0"
-        }`}
-      >
-        {isDark ? <FiMoon size={9} /> : <FiSun size={9} />}
-      </span>
-    </button>
-  );
-}
-
-function PostJobButton({ onClick, isDark }) {
+function PostJobButton({ onClick }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-[31px] items-center justify-center gap-[7px] rounded-full border px-[15px] text-[12px] font-bold leading-none shadow-[inset_0_3px_4px_rgba(0,0,0,0.08),0_3px_8px_rgba(1,82,164,0.08)] transition hover:-translate-y-[1px] active:translate-y-0"
-      style={{
-        color: isDark ? "#FFFFFF" : "#0152A4",
-        backgroundColor: isDark ? "rgba(255,255,255,0.065)" : "#EBF5FF",
-        borderColor: isDark ? "rgba(255,255,255,0.14)" : "#4CA5FF",
-      }}
+      className={`inline-flex h-10.25 w-37.25 items-center justify-center rounded-full border-hairline border-blue-400 bg-blue-50 p-2.5 text-accdoo-primary shadow-post-job-inset transition hover:-translate-y-px active:translate-y-0 dark:border-white/15 dark:bg-white/5 dark:text-white ${homeInter.className}`}
     >
-      <span>Post a Job</span>
-      <span className="text-[17px] font-medium leading-none">+</span>
+      <span className="inline-flex h-6 w-32.25 items-center justify-center gap-3">
+        <span className="whitespace-nowrap text-[16px] font-semibold leading-none">
+          Post a Job
+        </span>
+        <span className="relative block h-6 w-6 shrink-0" aria-hidden="true">
+          <span className="absolute left-1/2 top-1/2 h-0.5 w-4.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-current" />
+          <span className="absolute left-1/2 top-1/2 h-4.5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-current" />
+        </span>
+      </span>
     </button>
   );
 }
@@ -108,9 +60,12 @@ export default function Navbar() {
     const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     const nextTheme = storedTheme === "dark" ? "dark" : "light";
 
-    setTheme(nextTheme);
     document.documentElement.classList.toggle("dark", nextTheme === "dark");
-    setThemeReady(true);
+
+    queueMicrotask(() => {
+      setTheme(nextTheme);
+      setThemeReady(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -168,6 +123,17 @@ export default function Navbar() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
   function toggleTheme() {
     const nextTheme = theme === "dark" ? "light" : "dark";
 
@@ -221,101 +187,92 @@ export default function Navbar() {
   const canRecruit =
     currentUser?.role === "recruiter" || currentUser?.role === "both";
 
-  const navTextColor = isDark ? "#FFFFFF" : "#071F3A";
-  const mutedTextColor = isDark ? "rgba(255,255,255,0.62)" : "#A7AFBD";
-  const authLinkColor = isDark ? "#FFFFFF" : "#0152A4";
-
   return (
-    <header className="sticky top-0 z-50 w-full bg-[var(--nav-bg)] font-sans shadow-[0_1px_0_rgba(2,18,38,0.055)] dark:shadow-none">
-      <nav className="mx-auto flex h-[54px] w-full max-w-[1440px] items-center justify-between px-[68px] max-xl:px-10 max-md:h-[66px] max-md:px-[26px]">
-        <AccDooLogo isDark={isDark} />
+    <header className="sticky top-0 z-50 w-full bg-nav font-sans shadow-nav-line dark:shadow-none">
+      <nav className="mx-auto flex h-13.5 w-full max-w-360 items-center justify-between px-17 max-xl:px-10 max-md:h-16.5 max-md:px-6.5">
+        <HomeLogo inverted={isDark} />
 
-        <div className="hidden items-center gap-[18px] md:flex">
-          <PostJobButton onClick={handlePostJobClick} isDark={isDark} />
+        <div className="hidden items-center gap-4.5 md:flex">
+          <PostJobButton onClick={handlePostJobClick} />
 
           {!isLoggedIn ? (
             <>
               <Link
                 href="/register"
-                className="text-[11px] font-bold leading-none transition hover:opacity-75"
-                style={{ color: authLinkColor }}
+                className="text-[11px] font-bold leading-none text-accdoo-primary transition hover:opacity-75 dark:text-white"
               >
                 Register
               </Link>
 
               <Link
                 href="/login"
-                className="text-[11px] font-bold leading-none transition hover:opacity-75"
-                style={{ color: authLinkColor }}
+                className="text-[11px] font-bold leading-none text-accdoo-primary transition hover:opacity-75 dark:text-white"
               >
                 Login
               </Link>
             </>
           ) : null}
 
-          <div className="flex items-center gap-[10px]">
+          <div className="flex items-center gap-2.5">
             {themeReady ? (
               <ThemeToggle theme={theme} onToggle={toggleTheme} />
             ) : (
-              <span className="h-[23px] w-[48px] rounded-full bg-[#EDF3FB]" />
+              <span className="h-5.75 w-12 rounded-full bg-theme-track dark:bg-slate-900" />
             )}
 
             <button
               type="button"
               aria-label="Notifications"
-              className="relative grid h-[24px] w-[24px] place-items-center rounded-full transition hover:bg-black/5 dark:hover:bg-white/10"
-              style={{ color: navTextColor }}
+              className="relative grid h-6 w-6 place-items-center rounded-full text-nav-text transition hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
             >
               <FiBell size={15} />
-              <span className="absolute right-[3px] top-[2px] h-[5px] w-[5px] rounded-full bg-[#FB2C36]" />
+              <span className="absolute right-0.75 top-0.5 h-1.25 w-1.25 rounded-full bg-red-500" />
             </button>
           </div>
 
           {isLoggedIn ? (
             <>
-              <span className="h-[32px] w-[2px] rounded-full bg-[#D9D9D98C] dark:bg-white/10" />
+              <span className="h-8 w-0.5 rounded-full bg-slate-300/55 dark:bg-white/10" />
 
               <div ref={profileMenuRef} className="relative">
                 <button
                   type="button"
                   onClick={() => setProfileOpen((current) => !current)}
-                  className="flex items-center gap-[9px]"
+                  className="flex items-center gap-2.25"
                   aria-label="Open profile menu"
                 >
-                  <span className="h-[32px] w-[32px] rounded-full">
+                  <span className="h-8 w-8 rounded-full">
                     <ProfileAvatar user={currentUser} />
                   </span>
 
-                  <span className="hidden max-w-[140px] text-left lg:block">
+                  <span className="hidden max-w-35 text-left lg:block">
                     <span
-                      className="block text-[9px] font-medium leading-[1.1]"
-                      style={{ color: mutedTextColor }}
+                      className="block text-[9px] font-medium leading-[1.1] text-slate-400 dark:text-white/60"
                     >
                       {canRecruit ? "Enterprise" : "Candidate"}
                     </span>
                     <span
-                      className="block truncate text-[11px] font-semibold leading-[1.25]"
-                      style={{ color: navTextColor }}
+                      className="block truncate text-[11px] font-semibold leading-tight text-nav-text dark:text-white"
                     >
                       {currentUser.name || "User"}
                     </span>
                   </span>
 
-                  <FiChevronDown size={12} style={{ color: mutedTextColor }} />
+                  <FiChevronDown size={12} className="text-slate-400 dark:text-white/60" />
                 </button>
 
                 {profileOpen ? (
-                  <div className="absolute right-0 top-[calc(100%+13px)] z-50 w-[250px] overflow-hidden rounded-[18px] border border-[var(--line-soft)] bg-[var(--surface-bg)] p-3 shadow-2xl shadow-slate-950/15">
-                    <div className="flex items-center gap-3 rounded-[14px] bg-black/[0.03] p-3 dark:bg-white/[0.06]">
+                  <div className="absolute right-0 top-[calc(100%+13px)] z-50 w-62.5 overflow-hidden rounded-[18px] border border-line-soft bg-surface p-3 shadow-2xl shadow-slate-950/15">
+                    <div className="flex items-center gap-3 rounded-[14px] bg-black/3 p-3 dark:bg-white/6">
                       <div className="h-10 w-10 shrink-0 rounded-full">
                         <ProfileAvatar user={currentUser} />
                       </div>
 
                       <div className="min-w-0">
-                        <p className="truncate text-[13px] font-semibold text-[var(--text-main)]">
+                        <p className="truncate text-[13px] font-semibold text-text-main">
                           {currentUser.name || "User"}
                         </p>
-                        <p className="truncate text-[11px] font-medium text-[var(--text-muted)]">
+                        <p className="truncate text-[11px] font-medium text-text-muted">
                           {currentUser.email}
                         </p>
                       </div>
@@ -325,7 +282,7 @@ export default function Navbar() {
                       <button
                         type="button"
                         onClick={handleProfileClick}
-                        className="flex w-full items-center gap-3 rounded-[13px] px-3 py-3 text-left text-[13px] font-semibold text-[var(--text-main)] transition hover:bg-[#155DFC]/10 hover:text-[#155DFC]"
+                        className="flex w-full items-center gap-3 rounded-[13px] px-3 py-3 text-left text-[13px] font-semibold text-text-main transition hover:bg-blue-600/10 hover:text-blue-600"
                       >
                         <FiUser size={15} />
                         Profile
@@ -334,7 +291,7 @@ export default function Navbar() {
                       <button
                         type="button"
                         onClick={handleLogout}
-                        className="flex w-full items-center gap-3 rounded-[13px] px-3 py-3 text-left text-[13px] font-semibold text-[#FB2C36] transition hover:bg-red-500/10"
+                        className="flex w-full items-center gap-3 rounded-[13px] px-3 py-3 text-left text-[13px] font-semibold text-red-500 transition hover:bg-red-500/10"
                       >
                         <FiLogOut size={15} />
                         Logout
@@ -350,7 +307,7 @@ export default function Navbar() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="grid h-[34px] w-[34px] place-items-center rounded-full text-[var(--text-main)] md:hidden"
+          className="grid h-8.5 w-8.5 place-items-center rounded-full text-text-main md:hidden"
           aria-label="Open menu"
         >
           <FiMenu size={27} />
@@ -358,29 +315,29 @@ export default function Navbar() {
       </nav>
 
       {open ? (
-        <div className="fixed inset-0 z-[100] bg-black/30 md:hidden">
-          <aside className="ml-auto flex h-screen w-[82%] max-w-[315px] flex-col overflow-hidden bg-[#155DFC] shadow-2xl">
-            <div className="flex h-[74px] items-center justify-between bg-white px-[24px]">
-              <AccDooLogo isDark={false} />
+        <div className="fixed inset-0 z-100 md:hidden">
+          <aside className="flex h-dvh w-full flex-col overflow-hidden bg-gradient-to-b from-blue-600 to-blue-800 text-white dark:from-slate-900 dark:to-black">
+            <div className="flex h-20.5 shrink-0 items-center justify-between bg-white px-7 dark:bg-slate-950">
+              <HomeLogo inverted={isDark} className="h-6" />
 
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Close menu"
-                className="grid h-9 w-9 place-items-center text-[#071F3A]"
+                className="grid h-9 w-9 place-items-center rounded-full text-nav-text transition hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
               >
-                <FiX size={23} />
+                <FiX size={25} />
               </button>
             </div>
 
-            <div className="flex items-center justify-between px-[24px] pt-[24px]">
+            <div className="flex items-center justify-between px-7 pt-6.5">
               {isLoggedIn ? (
                 <button
                   type="button"
                   onClick={handleProfileClick}
-                  className="flex items-center gap-[10px] text-left"
+                  className="flex items-center gap-2.5 text-left"
                 >
-                  <span className="h-[36px] w-[36px] rounded-full">
+                  <span className="h-9 w-9 rounded-full">
                     <ProfileAvatar user={currentUser} />
                   </span>
 
@@ -398,13 +355,13 @@ export default function Navbar() {
                   <p className="text-[13px] font-semibold text-white">
                     Welcome to AccDoo
                   </p>
-                  <p className="mt-[4px] text-[10px] font-medium text-white/70">
+                  <p className="mt-1 text-[10px] font-medium text-white/70">
                     Find your next opportunity
                   </p>
                 </div>
               )}
 
-              <div className="flex items-center gap-[10px]">
+              <div className="flex items-center gap-2.5">
                 {themeReady ? (
                   <ThemeToggle theme={theme} onToggle={toggleTheme} />
                 ) : null}
@@ -412,21 +369,21 @@ export default function Navbar() {
                 <button
                   type="button"
                   aria-label="Notifications"
-                  className="relative grid h-[26px] w-[26px] place-items-center rounded-full text-white"
+                  className="relative grid h-6.5 w-6.5 place-items-center rounded-full text-white"
                 >
                   <FiBell size={16} />
-                  <span className="absolute right-[4px] top-[4px] h-[5px] w-[5px] rounded-full bg-[#FB2C36]" />
+                  <span className="absolute right-1 top-1 h-1.25 w-1.25 rounded-full bg-red-500" />
                 </button>
               </div>
             </div>
 
-            <div className="mt-[31px] px-[24px]">
-              <div className="divide-y divide-white/20 border-y border-white/20">
+            <div className="mt-8 px-7">
+              <div className="divide-y divide-white/25 border-b border-white/25">
                 {!isLoggedIn ? (
                   <Link
                     href="/register"
                     onClick={() => setOpen(false)}
-                    className="block py-[16px] text-[14px] font-medium text-white"
+                    className="block py-4.5 text-[16px] font-medium text-white"
                   >
                     Register
                   </Link>
@@ -435,7 +392,7 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={handlePostJobClick}
-                  className="block w-full py-[16px] text-left text-[14px] font-medium text-white"
+                  className="block w-full py-4.5 text-left text-[16px] font-medium text-white"
                 >
                   Post a Job
                 </button>
@@ -444,7 +401,7 @@ export default function Navbar() {
                   <button
                     type="button"
                     onClick={handleProfileClick}
-                    className="block w-full py-[16px] text-left text-[14px] font-medium text-white"
+                    className="block w-full py-4.5 text-left text-[16px] font-medium text-white"
                   >
                     Profile
                   </button>
@@ -453,7 +410,7 @@ export default function Navbar() {
                 <Link
                   href="/"
                   onClick={() => setOpen(false)}
-                  className="block py-[16px] text-[14px] font-medium text-white"
+                  className="block py-4.5 text-[16px] font-medium text-white"
                 >
                   About
                 </Link>
@@ -461,7 +418,7 @@ export default function Navbar() {
                 <Link
                   href="/"
                   onClick={() => setOpen(false)}
-                  className="block py-[16px] text-[14px] font-medium text-white"
+                  className="block py-4.5 text-[16px] font-medium text-white"
                 >
                   Contact us
                 </Link>
@@ -470,7 +427,7 @@ export default function Navbar() {
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="block w-full py-[16px] text-left text-[14px] font-medium text-white"
+                    className="block w-full py-4.5 text-left text-[16px] font-medium text-white"
                   >
                     Logout
                   </button>
@@ -478,13 +435,13 @@ export default function Navbar() {
               </div>
             </div>
 
-            <div className="mt-auto px-[28px] pb-[22px]">
+            <div className="mt-auto px-9 pb-5.5">
               {!isLoggedIn ? (
                 <>
                   <Link
                     href="/register"
                     onClick={() => setOpen(false)}
-                    className="mb-[12px] grid h-[38px] w-full place-items-center rounded-[5px] bg-[#F59E0B] text-[12px] font-semibold text-white"
+                    className="mb-3 grid h-10.5 w-full place-items-center rounded-md bg-amber-500 text-[13px] font-semibold text-white shadow-action"
                   >
                     Sign Up
                   </Link>
@@ -492,15 +449,15 @@ export default function Navbar() {
                   <Link
                     href="/login"
                     onClick={() => setOpen(false)}
-                    className="grid h-[38px] w-full place-items-center rounded-[5px] border border-white/25 text-[12px] font-semibold text-white"
+                    className="grid h-10.5 w-full place-items-center rounded-md border border-white/30 bg-white/3 text-[13px] font-semibold text-white"
                   >
                     Login
                   </Link>
                 </>
               ) : null}
 
-              <p className="mt-[15px] text-center text-[10px] font-medium text-white/65">
-                © accdoo.jobs 2026
+              <p className="mt-3.75 text-center text-[10px] font-medium text-white/65">
+                &copy; accdoo.jobs 2026
               </p>
             </div>
           </aside>

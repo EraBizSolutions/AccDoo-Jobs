@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { FiChevronDown } from "react-icons/fi";
 
+import HomeLogo from "@/components/common/HomeLogo";
+
 const footerGroups = [
   {
     title: "Accdoo",
@@ -27,18 +29,6 @@ const footerGroups = [
   },
 ];
 
-function AccDooFooterLogo() {
-  return (
-    <Link href="/" className="inline-flex items-center">
-      <img
-        src="/accdoo-logo.svg"
-        alt="AccDoo"
-        className="h-[28px] w-auto object-contain brightness-0 invert max-md:h-[22px]"
-      />
-    </Link>
-  );
-}
-
 function MobileFooterGroup({ group }) {
   const [open, setOpen] = useState(false);
 
@@ -47,7 +37,7 @@ function MobileFooterGroup({ group }) {
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex w-full items-center justify-between py-[18px] text-left text-[12px] font-bold text-white"
+        className="flex w-full items-center justify-between py-4.5 text-left text-[12px] font-bold text-white"
       >
         {group.title}
         <FiChevronDown
@@ -57,7 +47,7 @@ function MobileFooterGroup({ group }) {
       </button>
 
       {open ? (
-        <ul className="space-y-[11px] pb-[16px]">
+        <ul className="space-y-2.75 pb-4">
           {group.links.map((item) => (
             <li key={`${group.title}-${item}`}>
               <Link
@@ -76,18 +66,18 @@ function MobileFooterGroup({ group }) {
 
 export default function Footer() {
   return (
-    <footer className="bg-[#0152A4] px-[78px] pt-[46px] font-sans text-white max-xl:px-10 max-md:px-4 max-md:pt-[30px]">
-      <div className="mx-auto w-full max-w-[1100px]">
-        <div className="pb-[58px] max-md:pb-[28px]">
-          <AccDooFooterLogo />
+    <footer className="bg-accdoo-primary px-19.5 pt-11.5 font-sans text-white max-xl:px-10 max-md:px-4 max-md:pt-7.5">
+      <div className="mx-auto w-full max-w-275">
+        <div className="pb-14.5 max-md:pb-7">
+          <HomeLogo inverted className="h-7 max-md:h-5.5" />
         </div>
 
-        <div className="hidden grid-cols-5 gap-[80px] pb-[52px] md:grid">
+        <div className="hidden grid-cols-5 gap-20 pb-13 md:grid">
           {footerGroups.map((group) => (
             <div key={group.title}>
               <h3 className="text-[12px] font-bold text-white">{group.title}</h3>
 
-              <ul className="mt-[20px] space-y-[13px]">
+              <ul className="mt-5 space-y-3.25">
                 {group.links.map((item) => (
                   <li key={`${group.title}-${item}`}>
                     <Link
@@ -109,12 +99,12 @@ export default function Footer() {
           ))}
         </div>
 
-        <div className="flex items-center justify-between border-t border-white/20 py-[24px] max-md:mt-[54px] max-md:flex-col max-md:gap-[18px] max-md:py-[27px]">
+        <div className="flex items-center justify-between border-t border-white/20 py-6 max-md:mt-13.5 max-md:flex-col max-md:gap-4.5 max-md:py-6.75">
           <p className="text-[12px] font-medium text-white/75 max-md:text-[11px]">
-            © accdoo.jobs 2026
+            &copy; accdoo.jobs 2026
           </p>
 
-          <div className="flex items-center gap-[28px]">
+          <div className="flex items-center gap-7">
             <Link
               href="/"
               className="text-[12px] font-medium text-white transition hover:text-white/75 max-md:text-[11px]"
