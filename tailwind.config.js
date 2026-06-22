@@ -58,6 +58,20 @@ module.exports = {
       borderWidth: {
         hairline: "0.5px",
       },
+      keyframes: {
+        shimmer: {
+          "0%": { transform: "translateX(-140%) skewX(-20deg)" },
+          "100%": { transform: "translateX(280%) skewX(-20deg)" },
+        },
+        "border-spin": {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(360deg)" },
+        },
+      },
+      animation: {
+        shimmer: "shimmer 2.8s ease-in-out infinite",
+        "border-spin": "border-spin 2.2s linear infinite",
+      },
     },
   },
 };

@@ -31,10 +31,10 @@ function PostJobButton({ onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex h-10.25 w-37.25 items-center justify-center rounded-full border-hairline border-blue-400 bg-blue-50 p-2.5 text-accdoo-primary shadow-post-job-inset transition hover:-translate-y-px active:translate-y-0 dark:border-white/15 dark:bg-white/5 dark:text-white ${homeInter.className}`}
+      className={`inline-flex h-10.25 min-w-37.25 items-center justify-center rounded-full border-hairline border-[#4CA5FF] bg-filter-active px-4 text-accdoo-primary shadow-post-job-inset transition hover:-translate-y-px hover:bg-blue-100 active:translate-y-0 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 max-md:h-10 max-md:min-w-0 max-md:px-4 ${homeInter.className}`}
     >
-      <span className="inline-flex h-6 w-32.25 items-center justify-center gap-3">
-        <span className="whitespace-nowrap text-[16px] font-semibold leading-none">
+      <span className="inline-flex items-center justify-center gap-3">
+        <span className="whitespace-nowrap text-[16px] font-semibold leading-none tracking-normal max-md:text-[14px]">
           Post a Job
         </span>
         <span className="relative block h-6 w-6 shrink-0" aria-hidden="true">
@@ -188,9 +188,9 @@ export default function Navbar() {
     currentUser?.role === "recruiter" || currentUser?.role === "both";
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-nav font-sans shadow-nav-line dark:shadow-none">
-      <nav className="mx-auto flex h-13.5 w-full max-w-360 items-center justify-between px-17 max-xl:px-10 max-md:h-16.5 max-md:px-6.5">
-        <HomeLogo inverted={isDark} />
+    <header className={`sticky top-0 z-50 w-full bg-nav shadow-nav-line dark:shadow-none ${homeInter.className}`}>
+      <nav className="mx-auto flex h-15.25 w-full max-w-360 items-center justify-between px-17 max-xl:px-10 max-md:h-16.5 max-md:px-6.5">
+        <HomeLogo inverted={isDark} className="h-7.5 max-md:h-6" />
 
         <div className="hidden items-center gap-4.5 md:flex">
           <PostJobButton onClick={handlePostJobClick} />
