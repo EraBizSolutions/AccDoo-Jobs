@@ -110,9 +110,7 @@ function SearchField({
   className = "",
 }) {
   return (
-    <label
-      className={`flex h-8 items-center gap-3 max-md:h-9 ${className}`}
-    >
+    <label className={`flex h-10 items-center gap-3 max-md:h-10.5 max-md:gap-3.5 ${className}`}>
       <span className="shrink-0 text-search-placeholder">{icon}</span>
       <input
         ref={inputRef}
@@ -121,7 +119,7 @@ function SearchField({
         onChange={onChange}
         placeholder={placeholder}
         autoComplete={name === "location" ? "off" : undefined}
-        className="w-full bg-transparent text-[12px] font-medium text-main-text outline-none placeholder:text-search-placeholder dark:text-white max-md:text-[12px]"
+        className="w-full bg-transparent text-[13px] font-medium text-main-text outline-none placeholder:text-search-placeholder dark:text-white max-md:text-[16px]"
       />
     </label>
   );
@@ -262,30 +260,40 @@ export default function JobSearchHero() {
   return (
     <section className={homeInter.className}>
       <div
-        className="relative h-19.5 overflow-hidden bg-secondary-blue max-md:h-21"
+        className="relative h-36 overflow-hidden bg-secondary-blue max-md:h-30"
       >
         <HeroPattern />
 
-        <div className="relative mx-auto flex h-full max-w-360 flex-col justify-center px-17 max-xl:px-10 max-md:px-6">
-          <h1 className="whitespace-nowrap text-[17px] font-semibold leading-none text-white max-md:whitespace-normal max-md:text-[14px]">
-            Sri Lanka’s smarter place for jobs and hiring
+        <div className="relative mx-auto flex h-full max-w-360 flex-col px-17 pt-6.5 max-xl:px-10 max-md:justify-center max-md:px-7 max-md:pt-0">
+          <h1 className="max-w-140 whitespace-nowrap text-2xl font-semibold leading-normal text-white max-md:max-w-none max-md:whitespace-normal max-md:text-[14px] max-md:leading-none">
+            <span className="max-md:hidden">
+              Sri Lanka&rsquo;s smarter place for jobs and hiring
+            </span>
+            <span className="hidden max-md:inline">Find your dream job</span>
           </h1>
-          <p className="mt-2.25 whitespace-nowrap text-[10px] font-medium leading-none text-white max-md:mt-2 max-md:max-w-64 max-md:whitespace-normal max-md:text-[9px] max-md:leading-tight">
-            <span className="font-bold">Accdoo Jobs</span> uses AI-powered
-            insights to help job seekers discover better roles and employers
-            find the right talent faster.
+          <p className="mt-2.5 max-w-144.5 text-[14px] font-normal leading-[22px] text-white max-md:mt-2 max-md:max-w-52 max-md:whitespace-normal max-md:text-[10px] max-md:leading-[12px]">
+            <span className="max-md:hidden">
+              <span className="font-bold">Accdoo Jobs</span> uses AI-powered
+              insights to help job seekers discover better roles and employers
+              find the right talent faster.
+            </span>
+            <span className="hidden max-md:inline">
+              Connect talent with opportunity through smarter hiring
+            </span>
           </p>
         </div>
       </div>
 
-      <div className="relative mx-auto w-full max-w-360 px-17 max-xl:px-10 max-md:px-6">
+      <div className="relative mx-auto w-full max-w-360 px-17 pt-6 max-xl:px-10 max-md:px-4 max-md:pt-0">
         <form
           onSubmit={handleSubmit}
-          className="relative z-10 mx-auto mt-4.5 w-full max-w-315 rounded-xl border border-search-border bg-search-surface px-6 pb-3 pt-3 shadow-search dark:border-slate-800 dark:bg-slate-950 dark:shadow-search-dark max-md:mt-7 max-md:rounded-[10px] max-md:px-3.75 max-md:py-4"
+          className={`relative z-10 mx-auto w-full max-w-315 rounded-xl border border-search-border bg-search-surface px-8.5 pb-4 pt-4 shadow-search dark:border-slate-800 dark:bg-slate-950 dark:shadow-search-dark max-md:mt-7 max-md:rounded-xl max-md:px-6 max-md:pb-7 max-md:pt-5 ${
+            showMobileFilters ? "max-md:h-auto" : "max-md:h-[188px]"
+          }`}
         >
-          <div className="grid grid-cols-[1fr_1px_1fr_80px] items-center max-md:block">
+          <div className="grid grid-cols-[1fr_1px_1fr_112px] items-center max-md:block">
             <SearchField
-              icon={<FiSearch size={16} />}
+              icon={<FiSearch size={17} />}
               name="search"
               value={filters.search}
               placeholder="Job title or keywords"
@@ -293,7 +301,7 @@ export default function JobSearchHero() {
             />
 
             <div
-              className="h-8 bg-menu-border dark:bg-slate-800 max-md:mt-2 max-md:h-px max-md:w-full"
+              className="h-10 bg-menu-border dark:bg-slate-800 max-md:mt-2 max-md:h-px max-md:w-full"
             />
 
             <SearchField
@@ -306,10 +314,14 @@ export default function JobSearchHero() {
               className="pl-6 pr-4 max-md:pl-0 max-md:pr-0"
             />
 
-            <div className="flex justify-end max-md:justify-center max-md:pt-3">
+            <div
+              className="hidden h-px w-full bg-menu-border dark:bg-slate-800 max-md:block"
+            />
+
+            <div className="flex justify-end max-md:justify-center max-md:pt-4">
               <button
                 type="submit"
-                className="h-8 w-20 rounded-md bg-amber-500 text-[11px] font-semibold leading-none text-white shadow-action transition hover:bg-amber-600 active:scale-98 max-md:h-9.5 max-md:w-full"
+                className="h-10 w-28 rounded-md bg-secondary-blue text-[12px] font-semibold leading-none text-white shadow-action transition hover:bg-secondary-blue-dark active:scale-98 max-md:h-10.5 max-md:w-40 max-md:bg-amber-500 max-md:text-[18px] max-md:hover:bg-amber-600"
               >
                 Search
               </button>
@@ -317,18 +329,18 @@ export default function JobSearchHero() {
           </div>
 
           <div
-            className="mt-2.5 h-px w-full bg-menu-border dark:bg-slate-800 max-md:hidden"
+            className="mt-4 h-px w-full bg-menu-border dark:bg-slate-800 max-md:hidden"
           />
 
-          <div className="mt-2.5 flex items-center gap-4 max-md:hidden">
-            <div className="flex items-center gap-3">
+          <div className="mt-4 flex items-center gap-4 max-md:hidden">
+            <div className="flex items-center gap-3.5">
               <FilterControls filters={filters} onChange={updateFilter} />
             </div>
 
             <button
               type="button"
               onClick={handleClear}
-              className={`ml-auto rounded-md px-2 py-1.5 text-[11px] font-medium leading-none text-red-500 transition active:scale-98 ${
+              className={`ml-auto rounded-md px-2 py-1.5 text-[12px] font-medium leading-none text-red-500 transition active:scale-98 ${
                 hasActiveFilters ? "bg-red-500/10" : "hover:bg-red-500/10"
               }`}
             >
@@ -338,7 +350,7 @@ export default function JobSearchHero() {
 
           {showMobileFilters ? (
             <div
-              className="hidden border-t border-menu-border pt-3.25 dark:border-white/10 max-md:grid max-md:grid-cols-2 max-md:gap-2"
+              className="hidden border-t border-menu-border pt-3.25 dark:border-white/10 max-md:mt-4 max-md:grid max-md:grid-cols-2 max-md:gap-2"
             >
               <FilterControls
                 filters={filters}
@@ -352,9 +364,9 @@ export default function JobSearchHero() {
         <button
           type="button"
           onClick={() => setShowMobileFilters((current) => !current)}
-          className="mx-auto mt-4.75 hidden items-center gap-1.75 text-[10px] font-semibold text-text-muted max-md:flex"
+          className="mx-auto mt-4 hidden items-center gap-2 text-[12px] font-medium text-[#8B8993] max-md:flex"
         >
-          <FiSliders size={12} />
+          <FiSliders size={16} />
           {showMobileFilters ? "Hide Filters" : "More Filters"}
         </button>
       </div>

@@ -216,7 +216,7 @@ function sortJobs(jobs, sortMode) {
 
 function CardSkeleton() {
   return (
-    <div className="h-44 rounded-2xl bg-card shadow-card max-md:h-37.5 max-md:rounded-[10px]">
+    <div className="h-65 rounded-2xl bg-card shadow-card max-md:h-37.5 max-md:rounded-[10px]">
       <div className="flex h-full animate-pulse gap-4 p-4">
         <div className="h-11 w-11 rounded-lg bg-black/10 dark:bg-white/10" />
         <div className="flex-1 space-y-3">
@@ -316,18 +316,18 @@ export default function JobsList() {
   }
 
   return (
-    <section className={`px-17 pb-18.5 pt-5 max-xl:px-10 max-md:px-6 max-md:pb-11 max-md:pt-7 ${homeInter.className}`}>
-      <div className="mx-auto w-full max-w-315">
-        <div className="mb-7 flex h-17 items-center justify-between rounded-[7px] bg-surface px-12 shadow-sort-bar ring-1 ring-black/2.5 max-md:h-auto max-md:flex-col max-md:gap-11 max-md:bg-transparent max-md:px-0 max-md:shadow-none max-md:ring-0">
+    <section className={`px-17 pb-18.5 pt-5 max-xl:px-10 max-md:px-0 max-md:pb-11 max-md:pt-5 ${homeInter.className}`}>
+      <div className="mx-auto w-full max-w-315 max-md:px-4">
+        <div className="mb-7 flex h-16.25 items-center justify-between rounded-[7px] bg-surface px-8.5 shadow-sort-bar ring-1 ring-black/2.5 max-md:h-auto max-md:flex-col max-md:gap-8 max-md:bg-transparent max-md:px-0 max-md:shadow-none max-md:ring-0">
           <div className="order-1 max-md:order-2 max-md:text-center">
-            <p className="text-[14px] font-medium leading-none text-gray-800 dark:text-slate-300 max-md:text-[13px]">
+            <p className="text-[14px] font-medium leading-none text-gray-800 dark:text-slate-300 max-md:text-[14px]">
               {isLoading
                 ? "Loading opportunities..."
                 : `${sortedJobs.length} active opportunities`}
             </p>
           </div>
 
-          <div className="order-2 flex items-center justify-center gap-2 max-md:order-1 max-md:mx-auto max-md:grid max-md:w-full max-md:max-w-88 max-md:grid-cols-[1.5fr_1fr_1fr] max-md:gap-3">
+          <div className="order-2 flex items-center justify-center gap-6 max-md:order-1 max-md:mx-auto max-md:flex max-md:w-auto max-md:max-w-none max-md:gap-[41px]">
             {SORT_TABS.map((tab) => {
               const isActive = sortMode === tab.value;
 
@@ -336,10 +336,10 @@ export default function JobsList() {
                   key={tab.value}
                   type="button"
                   onClick={() => handleSortChange(tab.value)}
-                  className={`h-10.25 min-w-0 whitespace-nowrap rounded-sort text-[14px] font-semibold leading-none transition active:scale-98 max-md:h-11 max-md:w-full max-md:px-2 max-md:text-[12px] ${
+                  className={`inline-flex h-10 min-w-0 items-center justify-center whitespace-nowrap rounded-sort text-center text-[12px] font-semibold leading-none transition active:scale-98 max-md:h-11 max-md:w-auto max-md:px-0 max-md:text-[12px] ${
                     isActive
-                      ? "w-35.25 bg-secondary-blue p-2.5 text-white shadow-sort-active max-md:px-3 max-md:py-0"
-                      : "px-6 text-text-muted hover:bg-secondary-blue/10 hover:text-secondary-blue max-md:px-1"
+                      ? "min-w-38 border border-secondary-blue bg-white px-5 py-0 text-secondary-blue shadow-sort-active dark:bg-slate-950 max-md:min-w-29 max-md:px-2.5"
+                      : "px-2 py-0 text-text-muted hover:bg-secondary-blue/10 hover:text-secondary-blue max-md:px-1"
                   }`}
                 >
                   {tab.label}
@@ -366,13 +366,13 @@ export default function JobsList() {
         ) : null}
 
         {isLoading ? (
-          <div className="mx-auto grid max-w-245 grid-cols-2 gap-x-10.5 gap-y-5.5 max-md:grid-cols-1 max-md:gap-y-3">
+          <div className="mx-auto grid max-w-318 grid-cols-2 gap-x-5 gap-y-5 max-md:w-full max-md:max-w-none max-md:grid-cols-1 max-md:gap-y-3">
             {Array.from({ length: 8 }).map((_, index) => (
               <CardSkeleton key={`job-skeleton-${index}`} />
             ))}
           </div>
         ) : visibleJobs.length ? (
-          <div className="mx-auto grid max-w-245 grid-cols-2 gap-x-10.5 gap-y-5.5 max-md:grid-cols-1 max-md:gap-y-3">
+          <div className="mx-auto grid max-w-318 grid-cols-2 gap-x-5 gap-y-5 max-md:w-full max-md:max-w-none max-md:grid-cols-1 max-md:gap-y-3">
             {visibleJobs.map((job, index) => (
               <JobCard
                 key={job.id}
@@ -399,7 +399,7 @@ export default function JobsList() {
             <button
               type="button"
               onClick={handleLoadMore}
-              className="h-9 rounded-[5px] border border-load-border bg-surface px-5.5 text-[12px] font-bold text-text-main shadow-sm transition hover:border-accdoo-primary hover:text-accdoo-primary active:scale-98 dark:border-white/25"
+              className="flex h-12 w-40 items-center justify-center gap-2.5 rounded-[10px] border border-[#C5C2D1] bg-[#F6F6F6] p-2.5 text-[14px] font-medium text-main-text shadow-sm transition hover:border-accdoo-primary hover:text-accdoo-primary active:scale-98 dark:border-white/25 dark:bg-slate-900"
             >
               Load More
             </button>

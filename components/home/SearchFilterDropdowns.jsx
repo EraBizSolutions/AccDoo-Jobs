@@ -1,20 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FiCheck, FiChevronDown } from "react-icons/fi";
+import { FiCheck } from "react-icons/fi";
 
 const WIDTH_CLASSES = {
   normal: {
-    button: "min-w-23 max-md:w-full",
+    button: "min-w-23.5 max-md:w-full",
   },
   modality: {
-    button: "min-w-25.25 max-md:w-full",
+    button: "min-w-27 max-md:w-full",
   },
   salary: {
-    button: "min-w-20.5 max-md:w-full",
+    button: "min-w-23 max-md:w-full",
   },
   tech: {
-    button: "min-w-28 max-md:w-full",
+    button: "min-w-30 max-md:w-full",
   },
 };
 
@@ -49,17 +49,32 @@ function FilterButton({
       type="button"
       onClick={onClick}
       aria-expanded={isOpen}
-      className={`inline-flex h-7.5 items-center justify-between gap-2 rounded-md border px-2.75 text-[11px] font-medium leading-none shadow-control transition hover:-translate-y-px active:scale-98 ${widthClasses.button} ${
+      className={`inline-flex h-8.5 items-center justify-between gap-2 rounded-md border px-3 text-[11px] font-medium leading-none shadow-control transition hover:-translate-y-px active:scale-98 ${widthClasses.button} ${
         isActive
           ? "border-secondary-blue bg-filter-active text-secondary-blue dark:border-blue-200 dark:bg-white/5 dark:text-blue-200"
           : "border-filter-border bg-filter-surface text-main-text dark:border-blue-200 dark:bg-transparent dark:text-blue-200"
       }`}
     >
       <span className="whitespace-nowrap">{children}</span>
-      <FiChevronDown
-        size={12}
-        className={`shrink-0 transition ${isOpen ? "rotate-180" : ""}`}
-      />
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 18 18"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className={`h-4.5 w-4.5 shrink-0 transition ${
+          isOpen ? "rotate-180" : ""
+        }`}
+        aria-hidden="true"
+      >
+        <path
+          d="M13.5 6.75004C13.5 6.75004 10.1858 11.25 9 11.25C7.8141 11.25 4.5 6.75 4.5 6.75"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
     </button>
   );
 }
